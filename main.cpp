@@ -31,7 +31,7 @@ const char* fragmentShaderSource = "#version 330 core\n"
 //GUI stuff
 using namespace nanogui;
 // Window dimensions
-const GLuint width = 800, height = 600;
+const GLuint width = 1200, height = 900;
 Color colval(0.5f, 0.5f, 0.7f, 1.f);
 float cameraX = 0;
 float cameraY = 0;
@@ -41,6 +41,13 @@ float rotateValue = 0;
 
 float zNear = 0;
 float zFar = 0;
+enum test_enum {
+	Item1,
+	Item2,
+	Item3
+};
+test_enum renderType = Item2;
+test_enum cullingType = Item1;
 std::string modelName = "A string";
 
 
@@ -101,33 +108,43 @@ int main()
 	gui->addVariable("Rotate Value", rotateValue)->setSpinnable(true);
 	gui->addButton("Rotate right+", []() {
 		//TODO
+		std::cout << "Rotate right+" << std::endl;
 		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 	gui->addButton("Rotate right-", []() {
 		//TODO
+		std::cout << "Rotate right-" << std::endl;
 		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 	gui->addButton("Rotate up+", []() {
 		//TODO
+		std::cout << "Rotate up+" << std::endl;
 		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 	gui->addButton("Rotate up-", []() {
 		//TODO
+		std::cout << "Rotate up-" << std::endl;
 		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 	gui->addButton("Rotate front+", []() {
 		//TODO
+		std::cout << "Rotate front+" << std::endl;
 		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 	gui->addButton("Rotate front-", []() {
 		//TODO
+		std::cout << "Rotate front-" << std::endl;
 		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
 
 	gui->addGroup("Configuration");
 	gui->addVariable("Z Near", zNear)->setSpinnable(true);
 	gui->addVariable("Z Far", zFar)->setSpinnable(true);
+	gui->addVariable("Render Type", renderType, enabled)->setItems({ "Point", "Line", "Triangle" });
+	gui->addVariable("Culling Type", cullingType, enabled)->setItems({ "CW", "CCW"});
 	gui->addVariable("Model Name", modelName);
 	gui->addButton("Reload model", []() {
 		//TODO
-		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
+		std::cout << "Reload Model" << std::endl;
+		});
 	gui->addButton("Reset Camera", []() {
 		//TODO
-		})->setTooltip("Testing a much longer tooltip, that will wrap around to new lines multiple times.");;
+		std::cout << "Reset Camera" << std::endl;
+		});
 	
 	screen->setVisible(true);
 	screen->performLayout();
