@@ -25,6 +25,7 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers);
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods);
+void char_callback(GLFWwindow*, unsigned int codepoint);
 
 const unsigned int SCREEN_WIDTH = 1200;
 const unsigned int SCREEN_HEIGHT = 900;
@@ -95,6 +96,7 @@ int main() {
 	glfwSetScrollCallback(window, mouse_scroll_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetKeyCallback(window, key_callback);
+	glfwSetCharCallback(window, char_callback);
 
 	// tell GLFW to capture our mouse
 	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -151,8 +153,8 @@ int main() {
 	glewExperimental = GL_TRUE;
 	// Initialize GLEW to setup the OpenGL Function pointers
 	glewInit();
-
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_CULL_FACE);
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glPointSize(2.0);
 
@@ -190,10 +192,10 @@ int main() {
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// get input
+		// Gets input
 		processInput(window);
 
-		// render events
+		// Renders events
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
 		
@@ -210,6 +212,14 @@ int main() {
 		// camera/view transformation
 		glm::mat4 view = camera.GetViewMatrix();
 		shader.setMatrix("view", view);
+
+		// Set render mode for model
+		if (cullingType == 0) {
+			glFrontFace(GL_CW); // Renders CW
+		}
+		else {
+			glFrontFace(GL_CCW); // Renders CCW
+		}
 
 		if (renderType == 0) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // Render as points
@@ -232,10 +242,10 @@ int main() {
 		} else {
 			glDrawArrays(GL_TRIANGLES, 0, model.vertices.size()); // Render as lines
 		}
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		// Draws GUI
-		screen->drawWidgets();
 
+		// Draws GUI
+		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		screen->drawWidgets();
 
 		// double buffer and input events
 		glfwSwapBuffers(window);
@@ -257,6 +267,10 @@ void key_callback(GLFWwindow*, int key, int scancode, int action, int mods) {
 	screen->keyCallbackEvent(key, scancode, action, mods);
 	camera.TranslateCamera(cameraX, cameraY, cameraZ); //Upon scroll, camera is translated according to numbers inputted in the GUI.
 	camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
+}
+
+void char_callback(GLFWwindow*, unsigned int codepoint) {
+	screen->charCallbackEvent(codepoint);
 }
 
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers) {
