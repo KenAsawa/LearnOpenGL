@@ -60,7 +60,7 @@ enum test_enum {
 };
 test_enum renderType = test_enum::Item2;
 test_enum cullingType = test_enum::Item1;
-std::string modelName = "A string";
+std::string modelName = "cube.obj";
 
 Screen* screen = nullptr;
 
@@ -162,6 +162,9 @@ int main() {
 	gui->addButton("Reset Camera", []() {
 		//TODO
 		std::cout << "Reset Camera" << std::endl;
+		cameraX = 0;
+		cameraY = 0;
+		cameraZ = 0;
 		});
 
 	screen->setVisible(true);
@@ -218,8 +221,9 @@ int main() {
 		glEnable(GL_DEPTH_TEST);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		// Sets functionality of colorpicker GUI
 		shader.use();
-		shader.setVec3("ourColor", 1.0, 0.0, 0.0);
+		shader.setVec3("ourColor", colval.r(), colval.g(), colval.b());
 
 		// pass projection matrix to shader (note that in this case it could change every frame)
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
@@ -258,14 +262,6 @@ void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
 		glfwSetWindowShouldClose(window, true);
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods) {
@@ -282,6 +278,13 @@ void drop_callback(GLFWwindow*, int count, const char** filenames) {
 
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers) {
 	screen->mouseButtonCallbackEvent(button, action, modifiers);
+	camera.TranslateCamera(cameraX, cameraY, cameraZ); //Upon click, camera is translated according to numbers inputted in the GUI.
+}
+
+void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
+{
+	screen->scrollCallbackEvent(xoffset, yoffset);
+	camera.TranslateCamera(cameraX, cameraY, cameraZ); //Upon scroll, camera is translated according to numbers inputted in the GUI.
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
@@ -307,14 +310,5 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 	lastX = xpos;
 	lastY = ypos;
 
-	camera.ProcessMouseMovement(xoffset, yoffset);
-}
-
-// glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
-	screen->scrollCallbackEvent(xoffset, yoffset);
-
-	camera.ProcessMouseScroll(yoffset);
+	//camera.ProcessMouseMovement(xoffset, yoffset);
 }
