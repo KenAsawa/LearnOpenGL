@@ -10,6 +10,7 @@
 using namespace std;
 
 void Model::load_obj(std::string obj_path) {
+	vertices.clear();
 	std::vector<glm::vec3> positions;
 	std::vector<glm::vec3> normals;
 	std::vector<glm::vec2> tex_coods;
