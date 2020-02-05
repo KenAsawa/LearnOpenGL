@@ -25,8 +25,6 @@ void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers);
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods);
-void char_callback(GLFWwindow*, unsigned int codepoint);
-void drop_callback(GLFWwindow*, int count, const char** filenames);
 
 const unsigned int SCREEN_WIDTH = 1200;
 const unsigned int SCREEN_HEIGHT = 900;
@@ -49,7 +47,9 @@ float cameraX = 0;
 float cameraY = 0;
 float cameraZ = 0;
 
-float rotateValue = 0;
+int cameraYaw = -90;
+int cameraPitch = 0;
+int cameraRoll = 0;
 
 float zNear = 0;
 float zFar = 0;
@@ -95,8 +95,6 @@ int main() {
 	glfwSetScrollCallback(window, mouse_scroll_callback);
 	glfwSetMouseButtonCallback(window, mouse_button_callback);
 	glfwSetKeyCallback(window, key_callback);
-	glfwSetCharCallback(window, char_callback);
-	glfwSetDropCallback(window, drop_callback);
 
 	// tell GLFW to capture our mouse
 	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -113,41 +111,18 @@ int main() {
 	bool enabled = true;
 	FormHelper* gui = new FormHelper(screen);
 	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Controls");
-	gui->addGroup("Color");
+	gui->addGroup("Model Color");
 	gui->addVariable("Object Color:", colval);
 
-	gui->addGroup("Position");
+	gui->addGroup("Camera Position");
 	gui->addVariable("X", cameraX)->setSpinnable(true);
 	gui->addVariable("Y", cameraY)->setSpinnable(true);
 	gui->addVariable("Z", cameraZ)->setSpinnable(true);
 
-	gui->addGroup("Rotate");
-	gui->addVariable("Rotate Value", rotateValue)->setSpinnable(true);
-	gui->addButton("Rotate right+", []() {
-		//TODO
-		std::cout << "Rotate right+" << std::endl;
-		});
-	gui->addButton("Rotate right-", []() {
-		//TODO
-		std::cout << "Rotate right-" << std::endl;
-		});
-
-	gui->addButton("Rotate up+", []() {
-		//TODO
-		std::cout << "Rotate up+" << std::endl;
-		});
-	gui->addButton("Rotate up-", []() {
-		//TODO
-		std::cout << "Rotate up-" << std::endl;
-		});
-	gui->addButton("Rotate front+", []() {
-		//TODO
-		std::cout << "Rotate front+" << std::endl;
-		});
-	gui->addButton("Rotate front-", []() {
-		//TODO
-		std::cout << "Rotate front-" << std::endl;
-		});
+	gui->addGroup("Camera Rotatation");
+	gui->addVariable("Yaw", cameraYaw)->setSpinnable(true);
+	gui->addVariable("Pitch", cameraPitch)->setSpinnable(true);
+	gui->addVariable("Roll", cameraRoll)->setSpinnable(true);
 
 	gui->addGroup("Configuration");
 	gui->addVariable("Z Near", zNear)->setSpinnable(true);
@@ -178,6 +153,8 @@ int main() {
 	glewInit();
 
 	glEnable(GL_DEPTH_TEST);
+	glEnable(GL_PROGRAM_POINT_SIZE);
+	glPointSize(2.0);
 
 	// build and compile our shader program
 	Shader shader("shader.vs", "shader.fs");
@@ -219,6 +196,7 @@ int main() {
 		// render events
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
+		
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Sets functionality of colorpicker GUI
@@ -233,7 +211,15 @@ int main() {
 		glm::mat4 view = camera.GetViewMatrix();
 		shader.setMatrix("view", view);
 
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		if (renderType == 0) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // Render as points
+		} else if (renderType == 1) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Render as lines
+		} else if (renderType == 2) {
+			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Render as triangles
+		} else {
+			std::cout << "Invalid render mode" << std::endl;
+		}
 
 		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
 
@@ -241,8 +227,11 @@ int main() {
 		modelObj = glm::translate(modelObj, glm::vec3(0.0f, 0.0f, 0.0f));
 		shader.setMatrix("model", modelObj);
 
-		glDrawArrays(GL_TRIANGLES, 0, model.vertices.size());
-
+		if (renderType == 0) {
+			glDrawArrays(GL_POINTS, 0, model.vertices.size()); // Render as points
+		} else {
+			glDrawArrays(GL_TRIANGLES, 0, model.vertices.size()); // Render as lines
+		}
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		// Draws GUI
 		screen->drawWidgets();
@@ -266,25 +255,21 @@ void processInput(GLFWwindow* window)
 
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods) {
 	screen->keyCallbackEvent(key, scancode, action, mods);
-}
-
-void char_callback(GLFWwindow*, unsigned int codepoint) {
-	screen->charCallbackEvent(codepoint);
-}
-
-void drop_callback(GLFWwindow*, int count, const char** filenames) {
-	screen->dropCallbackEvent(count, filenames);
+	camera.TranslateCamera(cameraX, cameraY, cameraZ); //Upon scroll, camera is translated according to numbers inputted in the GUI.
+	camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
 }
 
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers) {
 	screen->mouseButtonCallbackEvent(button, action, modifiers);
 	camera.TranslateCamera(cameraX, cameraY, cameraZ); //Upon click, camera is translated according to numbers inputted in the GUI.
+	camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
 }
 
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 {
 	screen->scrollCallbackEvent(xoffset, yoffset);
 	camera.TranslateCamera(cameraX, cameraY, cameraZ); //Upon scroll, camera is translated according to numbers inputted in the GUI.
+	camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
