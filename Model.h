@@ -11,11 +11,8 @@
 class Model {
 public:
 	struct Vertex {
-		// Position
 		glm::vec3 Position;
-		// Normal
 		glm::vec3 Normal;
-		// TexCoords
 		glm::vec2 TexCoords;
 	};
 	Model() {
@@ -28,7 +25,7 @@ public:
 	float maxY = 0.0f;
 	float minZ = 0.0f;
 	float maxZ = 0.0f;
-	void load_obj(std::string obj_path);
+	void loadObj(std::string pathName);
 };
 
 #endif

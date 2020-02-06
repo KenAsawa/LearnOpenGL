@@ -16,7 +16,6 @@
 #include "Camera.h"
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height);
-void processInput(GLFWwindow* window);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers);
@@ -29,7 +28,8 @@ const unsigned int SCREEN_WIDTH = 800;
 const unsigned int SCREEN_HEIGHT = 600;
 
 // Model Stuff
-unsigned int VBO, VAO;
+unsigned int VBO;
+unsigned int VAO;
 Model* model = nullptr;
 
 // Camera
@@ -44,7 +44,7 @@ float lastFrame = 0.0f;
 
 //GUI stuff
 using namespace nanogui;
-Color colval(0.5f, 0.5f, 0.7f, 1.f);
+Color colval(0.8f, 0.0f, 0.8f, 1.0f);
 float cameraX = 0.0f;
 float cameraY = 0.0f;
 float cameraZ = 0.0f;
@@ -167,21 +167,18 @@ int main() {
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// Gets input
-		processInput(window);
-
 		// Renders events
-		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Sets functionality of colorpicker GUI
 		shader.use();
-		shader.setVec3("ourColor", colval.r(), colval.g(), colval.b());
+		shader.setVec3("color", colval.r(), colval.g(), colval.b());
 
 		// Passes projection matrix to shader
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
+		glm::mat4 projection = glm::perspective(glm::radians(100.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
 		shader.setMatrix("projection", projection);
 		
 		//Apply camera translation and rotation.
@@ -238,7 +235,7 @@ int main() {
 }
 
 void load_model(const char* pathName) {
-	model->load_obj(pathName);
+	model->loadObj(pathName);
 	camera.setNewOrigin(0, (model->maxY + model->minY)/2, 3);
 	// Binds Vertex Array Object first
 	glBindVertexArray(VAO);
@@ -268,12 +265,6 @@ void resetVariables(){
 }
 
 // Callbacks listen for inputs.
-void processInput(GLFWwindow* window)
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-}
-
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods) {
 	screen->keyCallbackEvent(key, scancode, action, mods);
 }
@@ -292,8 +283,6 @@ void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
 }
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
-	// Resizes the window
-	glViewport(0, 0, width, height);
 	screen->resizeCallbackEvent(width, height);
 }
 

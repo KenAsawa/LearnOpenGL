@@ -9,7 +9,7 @@
 #include <glm/gtc/type_ptr.hpp>
 using namespace std;
 
-void Model::load_obj(std::string obj_path) {
+void Model::loadObj(std::string pathName) {
 	minX = 10000;
 	maxX = -10000; 
 	minY = 10000;
@@ -23,7 +23,7 @@ void Model::load_obj(std::string obj_path) {
 	std::vector<glm::vec2> tex_coods;
 	ifstream ifs;
 	try {
-		ifs.open(obj_path);
+		ifs.open(pathName);
 		string one_line;
 		while (getline(ifs, one_line)) {
 			stringstream ss(one_line);
