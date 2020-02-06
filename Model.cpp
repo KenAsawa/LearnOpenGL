@@ -10,6 +10,7 @@
 using namespace std;
 
 void Model::load_obj(std::string obj_path) {
+
 	vertices.clear();
 	std::vector<glm::vec3> positions;
 	std::vector<glm::vec3> normals;
@@ -61,6 +62,7 @@ void Model::load_obj(std::string obj_path) {
 				vertices.push_back(vertex_0);
 				vertices.push_back(vertex_1);
 				vertices.push_back(vertex_2);
+				
 			}
 		}
 	}

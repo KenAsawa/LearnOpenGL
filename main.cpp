@@ -1,5 +1,3 @@
-#include <iostream>
-
 // GLEW
 #define GLEW_STATIC
 #include <GL/glew.h>
@@ -7,16 +5,14 @@
 // GLFW
 #include <GLFW/glfw3.h>
 
+#include <iostream>
 #include "nanogui/nanogui.h"
-
 #include <stb_image.h>
-
-#include "Shader.h"
-#include "Model.h"
-
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
+#include "Shader.h"
+#include "Model.h"
 #include "Camera.h"
 
 void framebuffer_size_callback(GLFWwindow * window, int width, int height);
@@ -28,15 +24,15 @@ void key_callback(GLFWwindow*, int key, int scancode, int action, int mods);
 void char_callback(GLFWwindow*, unsigned int codepoint);
 void load_model(const char* pathName);
 
-const unsigned int SCREEN_WIDTH = 1200;
-const unsigned int SCREEN_HEIGHT = 900;
+const unsigned int SCREEN_WIDTH = 800;
+const unsigned int SCREEN_HEIGHT = 600;
 
 // Model Stuff
 unsigned int VBO, VAO;
 Model* model = nullptr;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 1.7f, 2.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 2.0f));
 float lastX = SCREEN_WIDTH / 2.0f;
 float lastY = SCREEN_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -48,16 +44,17 @@ float lastFrame = 0.0f;
 //GUI stuff
 using namespace nanogui;
 Color colval(0.5f, 0.5f, 0.7f, 1.f);
-float cameraX = 0;
-float cameraY = 0;
-float cameraZ = 0;
+float cameraX = 0.0f;
+float cameraY = 0.0f;
+float cameraZ = 0.0f;
 
 int cameraYaw = -90;
 int cameraPitch = 0;
 int cameraRoll = 0;
 
-float zNear = 0;
-float zFar = 0;
+float zNear = 0.4f;
+float zFar = 5.0f;
+
 enum test_enum {
 	Item1,
 	Item2,
@@ -65,12 +62,12 @@ enum test_enum {
 };
 test_enum renderType = test_enum::Item2;
 test_enum cullingType = test_enum::Item2;
-std::string modelName = "cube.obj";
+std::string modelName = "cyborg.obj";
 
 Screen* screen = nullptr;
 
 int main() {
-	// Initialize GLFW to version 3.3
+	// Initializes GLFW to version 3.3
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -85,13 +82,13 @@ int main() {
 	}
 	glfwMakeContextCurrent(window);
 
-	// Initialize GLAD
-#if defined(NANOGUI_GLAD)
-	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-		throw std::runtime_error("Could not initialize GLAD!");
-	}
-	glGetError(); // pull and ignore unhandled errors like GL_INVALID_ENUM
-#endif
+	// Initializes GLAD
+	#if defined(NANOGUI_GLAD)
+		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+			throw std::runtime_error("Could not initialize GLAD!");
+		}
+		glGetError(); // pull and ignore unhandled errors like GL_INVALID_ENUM
+	#endif
 
 	// Sets OpenGL Screen Size and register screen resize callback
 	glViewport(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT);
@@ -102,18 +99,11 @@ int main() {
 	glfwSetKeyCallback(window, key_callback);
 	glfwSetCharCallback(window, char_callback);
 
-	// tell GLFW to capture our mouse
-	//glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
-
-
-	glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-	glClear(GL_COLOR_BUFFER_BIT);
-
-	// Create a nanogui screen and pass the glfw pointer to initialize
+	// Creates a nanogui screen and pass the glfw pointer to initialize
 	screen = new Screen();
 	screen->initialize(window, true);
 
-	// Create nanogui gui
+	// Start of nanogui gui
 	bool enabled = true;
 	FormHelper* gui = new FormHelper(screen);
 	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Controls");
@@ -137,20 +127,23 @@ int main() {
 	gui->addVariable("Culling Type", cullingType, enabled)->setItems({ "CW", "CCW" });
 	gui->addVariable("Model Name", modelName);
 	gui->addButton("Reload model", []() {
+		// Loads inputted model
 		std::string pathName = "resources/objects/" + modelName;
 		load_model(pathName.c_str());
 		});
 	gui->addButton("Reset Camera", []() {
+		// Resets all variables to base values.
 		cameraX = 0;
 		cameraY = 0;
 		cameraZ = 0;
 		cameraYaw = -90;
 		cameraPitch = 0;
 		cameraRoll = 0;
+		zNear = 0.4f;
+		zFar = 5.0f;
 		});
 	screen->setVisible(true);
 	screen->performLayout();
-
 	//End of nanogui gui
 
 	// Set this to true so GLEW knows to use a modern approach to retrieving function pointers and extensions
@@ -158,18 +151,18 @@ int main() {
 	// Initialize GLEW to setup the OpenGL Function pointers
 	glewInit();
 	glEnable(GL_DEPTH_TEST);
+	// Sets size of points when rendering as points
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glPointSize(2.0);
 	
-	model = new Model();
-
 	glGenVertexArrays(1, &VAO);
 	glGenBuffers(1, &VBO);
 
-	// Build and compile shaders
+	// Builds and compiles shaders
 	Shader shader("shader.vs", "shader.fs");
 
-	//Loads model
+	// Loads model
+	model = new Model();
 	load_model("resources/objects/cyborg.obj");
 
 	// Game Loop
@@ -182,10 +175,6 @@ int main() {
 		// Gets input
 		processInput(window);
 
-		//Apply camera translation and rotation.
-		camera.TranslateCamera(cameraX, cameraY, cameraZ);
-		camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
-
 		// Renders events
 		glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
@@ -196,11 +185,13 @@ int main() {
 		shader.use();
 		shader.setVec3("ourColor", colval.r(), colval.g(), colval.b());
 
-		// pass projection matrix to shader (note that in this case it could change every frame)
-		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, 0.1f, 100.0f);
+		// Passes projection matrix to shader
+		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
 		shader.setMatrix("projection", projection);
 
-		// camera/view transformation
+		//Apply camera translation and rotation.
+		camera.TranslateCamera(cameraX, cameraY, cameraZ);
+		camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
 		glm::mat4 view = camera.GetViewMatrix();
 		shader.setMatrix("view", view);
 
@@ -223,12 +214,13 @@ int main() {
 			std::cout << "Invalid render mode" << std::endl;
 		}
 
-		glBindVertexArray(VAO); // seeing as we only have a single VAO there's no need to bind it every time, but we'll do so to keep things a bit more organized
+		glBindVertexArray(VAO); // Binds VAO
 
 		glm::mat4 modelObj = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		modelObj = glm::translate(modelObj, glm::vec3(0.0f, 0.0f, 0.0f));
 		shader.setMatrix("model", modelObj);
 
+		// Sets render mode
 		if (renderType == 0) {
 			glDrawArrays(GL_POINTS, 0, model->vertices.size()); // Render as points
 		} else {
@@ -239,7 +231,8 @@ int main() {
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		screen->drawWidgets();
 		gui->refresh();
-		// double buffer and input events
+
+		// Swaps buffers, processes events.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
@@ -252,23 +245,23 @@ int main() {
 void load_model(const char* pathName) {
 	model->load_obj(pathName);
 
-	// bind the Vertex Array Object first, then bind and set vertex buffer(s), and then configure vertex attributes(s).
+	// Binds Vertex Array Object first
 	glBindVertexArray(VAO);
 
+	// Binds and sets vertex buffers
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	glBufferData(GL_ARRAY_BUFFER, model->vertices.size() * sizeof(Model::Vertex), &(model->vertices.front()), GL_STATIC_DRAW);
 
+	// Configures vertex attributess
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)offsetof(Model::Vertex, Position));
 	glEnableVertexAttribArray(0);
 
-	// note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
+	// Unbind
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-	// You can unbind the VAO afterwards so other VAO calls won't accidentally modify this VAO, but this rarely happens. Modifying other
-	// VAOs requires a call to glBindVertexArray anyways so we generally don't unbind VAOs (nor VBOs) when it's not directly necessary.
 	glBindVertexArray(0);
 }
 
+// Callbacks listen for inputs.
 void processInput(GLFWwindow* window)
 {
 	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -301,19 +294,4 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 {
 	screen->cursorPosCallbackEvent(xpos, ypos);
-
-	if (firstMouse)
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-	lastX = xpos;
-	lastY = ypos;
-
-	//camera.ProcessMouseMovement(xoffset, yoffset);
 }
