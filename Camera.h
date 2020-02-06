@@ -72,8 +72,8 @@ public:
         return glm::lookAt(Position, Position + Front, Up);
     }
 
-    void TranslateCamera(float X, float Y, float Z) {
-        Position = Origin + glm::vec3(X, Y, Z);
+    void TranslateCamera(float posX, float posY, float posZ) {
+        Position = Origin + glm::vec3(posX, posY, posZ);
     }
 
     void RotateCamera(float inYaw, float inPitch, float inRoll) {
@@ -81,6 +81,10 @@ public:
         Pitch = inPitch;
         Roll = inRoll;
         updateCameraVectors();
+    }
+
+    void setNewOrigin(float posX, float posY, float posZ) {
+        Origin = glm::vec3(posX, posY, posZ);
     }
 
 private:

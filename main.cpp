@@ -23,6 +23,7 @@ void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers);
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods);
 void char_callback(GLFWwindow*, unsigned int codepoint);
 void load_model(const char* pathName);
+void resetVariables();
 
 const unsigned int SCREEN_WIDTH = 800;
 const unsigned int SCREEN_HEIGHT = 600;
@@ -130,17 +131,11 @@ int main() {
 		// Loads inputted model
 		std::string pathName = "resources/objects/" + modelName;
 		load_model(pathName.c_str());
+		resetVariables();
 		});
 	gui->addButton("Reset Camera", []() {
 		// Resets all variables to base values.
-		cameraX = 0;
-		cameraY = 0;
-		cameraZ = 0;
-		cameraYaw = -90;
-		cameraPitch = 0;
-		cameraRoll = 0;
-		zNear = 0.4f;
-		zFar = 5.0f;
+		resetVariables();
 		});
 	screen->setVisible(true);
 	screen->performLayout();
@@ -188,7 +183,7 @@ int main() {
 		// Passes projection matrix to shader
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
 		shader.setMatrix("projection", projection);
-
+		
 		//Apply camera translation and rotation.
 		camera.TranslateCamera(cameraX, cameraY, cameraZ);
 		camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
@@ -244,7 +239,7 @@ int main() {
 
 void load_model(const char* pathName) {
 	model->load_obj(pathName);
-
+	camera.setNewOrigin(0, (model->maxY + model->minY)/2, 3);
 	// Binds Vertex Array Object first
 	glBindVertexArray(VAO);
 
@@ -259,6 +254,17 @@ void load_model(const char* pathName) {
 	// Unbind
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
+}
+
+void resetVariables(){
+	cameraX = 0;
+	cameraY = 0;
+	cameraZ = 0;
+	cameraYaw = -90;
+	cameraPitch = 0;
+	cameraRoll = 0;
+	zNear = 0.4f;
+	zFar = 5.0f;
 }
 
 // Callbacks listen for inputs.

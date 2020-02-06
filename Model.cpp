@@ -10,7 +10,13 @@
 using namespace std;
 
 void Model::load_obj(std::string obj_path) {
-
+	minX = 10000;
+	maxX = -10000; 
+	minY = 10000;
+	maxY = -10000; 
+	minZ = 10000;
+	maxZ = -10000;
+	
 	vertices.clear();
 	std::vector<glm::vec3> positions;
 	std::vector<glm::vec3> normals;
@@ -59,10 +65,32 @@ void Model::load_obj(std::string obj_path) {
 				vertex_2.Position = positions[pos_idx - offset];
 				vertex_2.TexCoords = tex_coods[tex_idx - offset];
 				vertex_2.Normal = normals[norm_idx - offset];
+
+				Vertex vertexList[3] = { vertex_0, vertex_1, vertex_2 };
+				// Calculates min and max coordinates of the model
+				for (int i = 0; i < 3; i++) {
+					if (vertexList[i].Position.x < minX) {
+						minX = vertexList[i].Position.x;
+					}
+					if (vertexList[i].Position.x > maxX) {
+						maxX = vertexList[i].Position.x;
+					}
+					if (vertexList[i].Position.y < minY) {
+						minY = vertexList[i].Position.y;
+					}
+					if (vertexList[i].Position.y > maxY) {
+						maxY = vertexList[i].Position.y;
+					}
+					if (vertexList[i].Position.z < minZ) {
+						minZ = vertexList[i].Position.z;
+					}
+					if (vertexList[i].Position.z > maxZ) {
+						maxZ = vertexList[i].Position.z;
+					}
+				}
 				vertices.push_back(vertex_0);
 				vertices.push_back(vertex_1);
 				vertices.push_back(vertex_2);
-				
 			}
 		}
 	}
