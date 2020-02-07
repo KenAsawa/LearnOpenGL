@@ -236,7 +236,7 @@ int main() {
 
 void load_model(const char* pathName) {
 	model->loadObj(pathName);
-	camera.setNewOrigin(0, (model->maxY + model->minY)/2, 3);
+	camera.setNewOrigin((model->maxX + model->minX)/2, (model->maxY + model->minY)/2, 3);
 	// Binds Vertex Array Object first
 	glBindVertexArray(VAO);
 
@@ -254,9 +254,9 @@ void load_model(const char* pathName) {
 }
 
 void resetVariables(){
-	cameraX = 0;
-	cameraY = 0;
-	cameraZ = 0;
+	cameraX = 0.0f;
+	cameraY = 0.0f;
+	cameraZ = 0.0f;
 	cameraYaw = -90;
 	cameraPitch = 0;
 	cameraRoll = 0;
