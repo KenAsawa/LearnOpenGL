@@ -24,8 +24,8 @@ void char_callback(GLFWwindow*, unsigned int codepoint);
 void load_model(const char* pathName);
 void resetVariables();
 
-const unsigned int SCREEN_WIDTH = 800;
-const unsigned int SCREEN_HEIGHT = 600;
+const unsigned int SCREEN_WIDTH = 1200;
+const unsigned int SCREEN_HEIGHT = 900;
 
 // Model Stuff
 unsigned int VBO;
@@ -44,7 +44,6 @@ float lastFrame = 0.0f;
 
 //GUI stuff
 using namespace nanogui;
-Color colval(0.8f, 0.0f, 0.8f, 1.0f);
 float cameraX = 0.0f;
 float cameraY = 0.0f;
 float cameraZ = 0.0f;
@@ -55,6 +54,20 @@ int cameraRoll = 0;
 
 float zNear = 0.4f;
 float zFar = 5.0f;
+
+Color objCol(0.8f, 0.0f, 0.8f, 1.0f);
+int objShine = 32;
+bool dLightStatus = false;
+Color dLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color dLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color dLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
+bool pLightStatus = false;
+Color pLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color pLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color pLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
+bool pLightRotateX = false;
+bool pLightRotateY = false;
+bool pLightRotateZ = false;
 
 enum test_enum {
 	Item1,
@@ -107,10 +120,8 @@ int main() {
 	// Start of nanogui gui
 	bool enabled = true;
 	FormHelper* gui = new FormHelper(screen);
-	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Controls");
-	gui->addGroup("Model Color");
-	gui->addVariable("Object Color:", colval);
-
+	// First nanogui gui
+	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Control Bar 1");
 	gui->addGroup("Camera Position");
 	gui->addVariable("X", cameraX)->setSpinnable(true);
 	gui->addVariable("Y", cameraY)->setSpinnable(true);
@@ -137,6 +148,16 @@ int main() {
 		// Resets all variables to base values.
 		resetVariables();
 		});
+	// Second nanogui gui
+	gui->addWindow(Eigen::Vector2i(210, 10), "Control Bar 2");
+	gui->addGroup("Lighting");
+	gui->addVariable("Object Color:", objCol);
+	gui->addVariable("Object Shininess", objShine);
+	gui->addVariable("Direction Light Status", dLightStatus);
+	gui->addVariable("Direction Light Ambient Color", dLightAmbientCol);
+	gui->addVariable("Direction Light Diffuse Color", dLightDiffuseCol);
+	gui->addVariable("Direction Light Specular Color", dLightSpecularCol);
+
 	screen->setVisible(true);
 	screen->performLayout();
 	//End of nanogui gui
@@ -174,8 +195,9 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 		// Sets functionality of colorpicker GUI
-		shader.use();
-		shader.setVec3("color", colval.r(), colval.g(), colval.b());
+		shader.use(); shader;
+		shader.setVec3("objectColor", objCol.r(), objCol.g(), objCol.b());
+		shader.setVec3("lightColor", 0.0f, 1.0f, 1.0f);
 
 		// Passes projection matrix to shader
 		glm::mat4 projection = glm::perspective(glm::radians(100.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
