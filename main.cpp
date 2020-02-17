@@ -15,7 +15,7 @@
 #include "Model.h"
 #include "Camera.h"
 
-void framebuffer_size_callback(GLFWwindow * window, int width, int height);
+void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos);
 void mouse_scroll_callback(GLFWwindow* window, double xoffset, double yoffset);
 void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers);
@@ -27,10 +27,8 @@ void resetVariables();
 const unsigned int SCREEN_WIDTH = 1200;
 const unsigned int SCREEN_HEIGHT = 900;
 
-// Model Stuff
-unsigned int VBO;
-unsigned int VAO;
-Model* model = nullptr;
+unsigned int VBO, objVAO;
+Model* modelptr = nullptr;
 
 // Camera
 Camera camera(glm::vec3(0.0f, 0.0f, 2.0f));
@@ -39,11 +37,12 @@ float lastY = SCREEN_HEIGHT / 2.0f;
 bool firstMouse = true;
 
 // Timing
-float deltaTime = 0.0f;	// time between current frame and last frame
+float deltaTime = 0.0f;		// Time between current frame and last frame
 float lastFrame = 0.0f;
 
 //GUI stuff
 using namespace nanogui;
+Color colval(0.8f, 0.0f, 0.8f, 1.0f);
 float cameraX = 0.0f;
 float cameraY = 0.0f;
 float cameraZ = 0.0f;
@@ -54,20 +53,6 @@ int cameraRoll = 0;
 
 float zNear = 0.4f;
 float zFar = 5.0f;
-
-Color objCol(0.8f, 0.0f, 0.8f, 1.0f);
-int objShine = 32;
-bool dLightStatus = false;
-Color dLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
-Color dLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
-Color dLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
-bool pLightStatus = false;
-Color pLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
-Color pLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
-Color pLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
-bool pLightRotateX = false;
-bool pLightRotateY = false;
-bool pLightRotateZ = false;
 
 enum test_enum {
 	Item1,
@@ -80,8 +65,12 @@ std::string modelName = "cyborg.obj";
 
 Screen* screen = nullptr;
 
+// Lighting
+glm::vec3 lightPos(1.2f, 1.0f, 2.0f); // Light position will be set later
+void processInput(GLFWwindow* window); //REMOVE LATER
+
 int main() {
-	// Initializes GLFW to version 3.3
+	// Initialize GLFW to version 3.3
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -96,12 +85,12 @@ int main() {
 	}
 	glfwMakeContextCurrent(window);
 
-	// Initializes GLAD
+	// Initialize GLAD
 	#if defined(NANOGUI_GLAD)
-		if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
-			throw std::runtime_error("Could not initialize GLAD!");
-		}
-		glGetError(); // pull and ignore unhandled errors like GL_INVALID_ENUM
+	if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress)) {
+		throw std::runtime_error("Could not initialize GLAD!");
+	}
+	glGetError(); // pull and ignore unhandled errors like GL_INVALID_ENUM
 	#endif
 
 	// Sets OpenGL Screen Size and register screen resize callback
@@ -120,8 +109,10 @@ int main() {
 	// Start of nanogui gui
 	bool enabled = true;
 	FormHelper* gui = new FormHelper(screen);
-	// First nanogui gui
-	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Control Bar 1");
+	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Controls");
+	gui->addGroup("Model Color");
+	gui->addVariable("Object Color:", colval);
+
 	gui->addGroup("Camera Position");
 	gui->addVariable("X", cameraX)->setSpinnable(true);
 	gui->addVariable("Y", cameraY)->setSpinnable(true);
@@ -148,16 +139,6 @@ int main() {
 		// Resets all variables to base values.
 		resetVariables();
 		});
-	// Second nanogui gui
-	gui->addWindow(Eigen::Vector2i(210, 10), "Control Bar 2");
-	gui->addGroup("Lighting");
-	gui->addVariable("Object Color:", objCol);
-	gui->addVariable("Object Shininess", objShine);
-	gui->addVariable("Direction Light Status", dLightStatus);
-	gui->addVariable("Direction Light Ambient Color", dLightAmbientCol);
-	gui->addVariable("Direction Light Diffuse Color", dLightDiffuseCol);
-	gui->addVariable("Direction Light Specular Color", dLightSpecularCol);
-
 	screen->setVisible(true);
 	screen->performLayout();
 	//End of nanogui gui
@@ -166,48 +147,65 @@ int main() {
 	glewExperimental = GL_TRUE;
 	// Initialize GLEW to setup the OpenGL Function pointers
 	glewInit();
+
 	glEnable(GL_DEPTH_TEST);
 	// Sets size of points when rendering as points
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glPointSize(2.0);
-	
-	glGenVertexArrays(1, &VAO);
+
+	// build and compile our shader program
+	Shader objectShader("shader.vs", "shader.fs");
+	Shader pLightShader("lighting.vs", "lighting.fs");
+
+	// first, configure the cube's VAO (and VBO)
+	glGenVertexArrays(1, &objVAO);
 	glGenBuffers(1, &VBO);
-
-	// Builds and compiles shaders
-	Shader shader("shader.vs", "shader.fs");
-
-	// Loads model
-	model = new Model();
+	modelptr = new Model();
 	load_model("resources/objects/cyborg.obj");
+
+	// second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
+	unsigned int lightVAO;
+	glGenVertexArrays(1, &lightVAO);
+	glBindVertexArray(lightVAO);
+
+	glBindBuffer(GL_ARRAY_BUFFER, VBO);
+	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(0);
 
 	// Game Loop
 	while (!glfwWindowShouldClose(window)) {
+
 		// Per-frame time logic
 		float currentFrame = glfwGetTime();
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// Renders events
+		// input //REMOVE LATER
+		processInput(window);
+
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// Sets functionality of colorpicker GUI
-		shader.use(); shader;
-		shader.setVec3("objectColor", objCol.r(), objCol.g(), objCol.b());
-		shader.setVec3("lightColor", 0.0f, 1.0f, 1.0f);
+		// Activates shaders with colors
+		objectShader.use();
+		objectShader.setVec3("objectColor", colval.r(), colval.g(), colval.b());
+		objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		objectShader.setVec3("lightPos", lightPos);
+		objectShader.setVec3("viewPos", camera.Position);
 
 		// Passes projection matrix to shader
 		glm::mat4 projection = glm::perspective(glm::radians(100.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
-		shader.setMatrix("projection", projection);
-		
+
 		//Apply camera translation and rotation.
-		camera.TranslateCamera(cameraX, cameraY, cameraZ);
-		camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
+		//camera.TranslateCamera(cameraX, cameraY, cameraZ); //FIX
+		//camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
 		glm::mat4 view = camera.GetViewMatrix();
-		shader.setMatrix("view", view);
+
+		objectShader.setMat4("projection", projection);
+		objectShader.setMat4("view", view);
 
 		// Sets culling mode for model
 		if (cullingType == 0) {
@@ -220,25 +218,32 @@ int main() {
 		// Sets render mode
 		if (renderType == 0) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_POINT); // Render as points
-		} else if (renderType == 1) {
+		}
+		else if (renderType == 1) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE); // Render as lines
-		} else if (renderType == 2) {
+		}
+		else if (renderType == 2) {
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL); // Render as triangles
-		} else {
+		}
+		else {
 			std::cout << "Invalid render mode" << std::endl;
 		}
 
-		glBindVertexArray(VAO); // Binds VAO
+		// world transformation
+		glm::mat4 model = glm::mat4(1.0f);
+		objectShader.setMat4("model", model);
 
+		glBindVertexArray(objVAO); //Binds VAO
 		glm::mat4 modelObj = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
 		modelObj = glm::translate(modelObj, glm::vec3(0.0f, 0.0f, 0.0f));
-		shader.setMatrix("model", modelObj);
+		objectShader.setMatrix("model", modelObj);
 
 		// Sets render mode
 		if (renderType == 0) {
-			glDrawArrays(GL_POINTS, 0, model->vertices.size()); // Render as points
-		} else {
-			glDrawArrays(GL_TRIANGLES, 0, model->vertices.size()); // Render as lines
+			glDrawArrays(GL_POINTS, 0, modelptr->vertices.size()); // Render as points
+		}
+		else {
+			glDrawArrays(GL_TRIANGLES, 0, modelptr->vertices.size()); // Render as lines
 		}
 
 		// Draws GUI
@@ -246,36 +251,70 @@ int main() {
 		screen->drawWidgets();
 		gui->refresh();
 
+		// also draw the lamp object
+		pLightShader.use();
+		pLightShader.setMat4("projection", projection);
+		pLightShader.setMat4("view", view);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, lightPos);
+		model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
+		pLightShader.setMat4("model", model);
+
+		glBindVertexArray(lightVAO);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+
+
 		// Swaps buffers, processes events.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}
 
 	// Clean up remaining resources
+	glDeleteVertexArrays(1, &objVAO);
+	glDeleteVertexArrays(1, &lightVAO);
+	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 	return 0;
 }
 
 void load_model(const char* pathName) {
-	model->loadObj(pathName);
-	camera.setNewOrigin((model->maxX + model->minX)/2, (model->maxY + model->minY)/2, 3);
+	modelptr->loadObj(pathName);
+	//camera.setNewOrigin((model->maxX + model->minX) / 2, (model->maxY + model->minY) / 2, 3);
 	// Binds Vertex Array Object first
-	glBindVertexArray(VAO);
+	glBindVertexArray(objVAO);
 
 	// Binds and sets vertex buffers
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, model->vertices.size() * sizeof(Model::Vertex), &(model->vertices.front()), GL_STATIC_DRAW);
+	glBufferData(GL_ARRAY_BUFFER, modelptr->vertices.size() * sizeof(Model::Vertex), &(modelptr->vertices.front()), GL_STATIC_DRAW);
 
 	// Configures vertex attributess
 	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)offsetof(Model::Vertex, Position));
 	glEnableVertexAttribArray(0);
+
+	glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, sizeof(Model::Vertex), (GLvoid*)offsetof(Model::Vertex, Position));
+	glEnableVertexAttribArray(1);
 
 	// Unbind
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
 }
 
-void resetVariables(){
+void processInput(GLFWwindow* window) //REMOVE LATER
+{
+	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+		glfwSetWindowShouldClose(window, true);
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+		camera.ProcessKeyboard(FORWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+		camera.ProcessKeyboard(BACKWARD, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+		camera.ProcessKeyboard(LEFT, deltaTime);
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+		camera.ProcessKeyboard(RIGHT, deltaTime);
+}
+
+void resetVariables() {
 	cameraX = 0.0f;
 	cameraY = 0.0f;
 	cameraZ = 0.0f;
@@ -310,5 +349,19 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	screen->cursorPosCallbackEvent(xpos, ypos);
+	if (firstMouse) //REMOVE LATER
+	{
+		lastX = xpos;
+		lastY = ypos;
+		firstMouse = false;
+	}
+
+	float xoffset = xpos - lastX;
+	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
+
+	lastX = xpos;
+	lastY = ypos;
+
+	camera.ProcessMouseMovement(xoffset, yoffset);
+
 }

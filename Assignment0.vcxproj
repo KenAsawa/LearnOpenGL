@@ -148,10 +148,11 @@
   <ItemGroup>
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Model.cpp" />
-    <ClCompile Include="Shader.cpp" />
     <ClCompile Include="stb_image.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="lighting.fs" />
+    <None Include="lighting.vs" />
     <None Include="shader.fs" />
     <None Include="shader.vs" />
   </ItemGroup>
