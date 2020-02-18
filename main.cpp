@@ -42,17 +42,28 @@ float lastFrame = 0.0f;
 
 //GUI stuff
 using namespace nanogui;
-Color colval(0.8f, 0.0f, 0.8f, 1.0f);
 float cameraX = 0.0f;
 float cameraY = 0.0f;
 float cameraZ = 0.0f;
-
 int cameraYaw = -90;
 int cameraPitch = 0;
 int cameraRoll = 0;
-
 float zNear = 0.4f;
 float zFar = 5.0f;
+
+Color objCol(0.8f, 0.0f, 0.8f, 1.0f);
+int objShine = 256;
+bool dLightStatus = false;
+Color dLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color dLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color dLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
+bool pLightStatus = false;
+Color pLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color pLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
+Color pLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
+bool pLightRotateX = false;
+bool pLightRotateY = false;
+bool pLightRotateZ = false;
 
 enum test_enum {
 	Item1,
@@ -67,7 +78,6 @@ Screen* screen = nullptr;
 
 // Lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f); // Light position will be set later
-void processInput(GLFWwindow* window); //REMOVE LATER
 
 int main() {
 	// Initialize GLFW to version 3.3
@@ -109,10 +119,9 @@ int main() {
 	// Start of nanogui gui
 	bool enabled = true;
 	FormHelper* gui = new FormHelper(screen);
-	ref<Window> nanoguiWindow = gui->addWindow(Eigen::Vector2i(10, 10), "Controls");
-	gui->addGroup("Model Color");
-	gui->addVariable("Object Color:", colval);
-
+	ref<Window> nanoguiWindow = 
+	// First nanogui gui
+	gui->addWindow(Eigen::Vector2i(10, 10), "Control Bar 1");
 	gui->addGroup("Camera Position");
 	gui->addVariable("X", cameraX)->setSpinnable(true);
 	gui->addVariable("Y", cameraY)->setSpinnable(true);
@@ -139,6 +148,23 @@ int main() {
 		// Resets all variables to base values.
 		resetVariables();
 		});
+
+	// Second nanogui gui
+	gui->addWindow(Eigen::Vector2i(210, 10), "Control Bar 2");
+	gui->addGroup("Lighting");
+	gui->addVariable("Object Color:", objCol);
+	gui->addVariable("Object Shininess", objShine);
+	gui->addVariable("Direction Light Status", dLightStatus);
+	gui->addVariable("Direction Light Ambient Color", dLightAmbientCol);
+	gui->addVariable("Direction Light Diffuse Color", dLightDiffuseCol);
+	gui->addVariable("Direction Light Specular Color", dLightSpecularCol);
+	gui->addVariable("Point Light Status", pLightStatus);
+	gui->addVariable("Point Light Ambient Color", pLightAmbientCol);
+	gui->addVariable("Point Light Diffuse Color", pLightDiffuseCol);
+	gui->addVariable("Point Light Specular Color", pLightSpecularCol);
+	gui->addVariable("Point Light Rotate on X", pLightRotateX);
+	gui->addVariable("Point Light Rotate on Y", pLightRotateY);
+	gui->addVariable("Point Light Rotate on Z", pLightRotateZ);
 	screen->setVisible(true);
 	screen->performLayout();
 	//End of nanogui gui
@@ -181,9 +207,6 @@ int main() {
 		deltaTime = currentFrame - lastFrame;
 		lastFrame = currentFrame;
 
-		// input //REMOVE LATER
-		processInput(window);
-
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glEnable(GL_DEPTH_TEST);
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
@@ -191,7 +214,7 @@ int main() {
 
 		// Activates shaders with colors
 		objectShader.use();
-		objectShader.setVec3("objectColor", colval.r(), colval.g(), colval.b());
+		objectShader.setVec3("objectColor", objCol.r(), objCol.g(), objCol.b());
 		objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
 		objectShader.setVec3("lightPos", lightPos);
 		objectShader.setVec3("viewPos", camera.Position);
@@ -200,8 +223,8 @@ int main() {
 		glm::mat4 projection = glm::perspective(glm::radians(100.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
 
 		//Apply camera translation and rotation.
-		//camera.TranslateCamera(cameraX, cameraY, cameraZ); //FIX
-		//camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
+		camera.TranslateCamera(cameraX, cameraY, cameraZ);
+		camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
 		glm::mat4 view = camera.GetViewMatrix();
 
 		objectShader.setMat4("projection", projection);
@@ -251,14 +274,10 @@ int main() {
 		screen->drawWidgets();
 		gui->refresh();
 
-		// also draw the lamp object
+		// Render's the pointLight's light.
 		pLightShader.use();
 		pLightShader.setMat4("projection", projection);
 		pLightShader.setMat4("view", view);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, lightPos);
-		model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-		pLightShader.setMat4("model", model);
 
 		glBindVertexArray(lightVAO);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
@@ -279,7 +298,8 @@ int main() {
 
 void load_model(const char* pathName) {
 	modelptr->loadObj(pathName);
-	//camera.setNewOrigin((model->maxX + model->minX) / 2, (model->maxY + model->minY) / 2, 3);
+	camera.setNewOrigin((modelptr->maxX + modelptr->minX) / 2, (modelptr->maxY + modelptr->minY) / 2, 3);
+	lightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, (modelptr->maxY + modelptr->minY) / 2, 3);
 	// Binds Vertex Array Object first
 	glBindVertexArray(objVAO);
 
@@ -297,21 +317,6 @@ void load_model(const char* pathName) {
 	// Unbind
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 	glBindVertexArray(0);
-}
-
-void processInput(GLFWwindow* window) //REMOVE LATER
-{
-	if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
-		glfwSetWindowShouldClose(window, true);
-
-	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-		camera.ProcessKeyboard(FORWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-		camera.ProcessKeyboard(BACKWARD, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-		camera.ProcessKeyboard(LEFT, deltaTime);
-	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-		camera.ProcessKeyboard(RIGHT, deltaTime);
 }
 
 void resetVariables() {
@@ -349,19 +354,5 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 
 void mouse_cursor_callback(GLFWwindow* window, double xpos, double ypos)
 {
-	if (firstMouse) //REMOVE LATER
-	{
-		lastX = xpos;
-		lastY = ypos;
-		firstMouse = false;
-	}
-
-	float xoffset = xpos - lastX;
-	float yoffset = lastY - ypos; // reversed since y-coordinates go from bottom to top
-
-	lastX = xpos;
-	lastY = ypos;
-
-	camera.ProcessMouseMovement(xoffset, yoffset);
-
+	screen->cursorPosCallbackEvent(xpos, ypos);
 }
