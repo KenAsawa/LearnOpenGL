@@ -51,7 +51,7 @@ int cameraRoll = 0;
 float zNear = 0.4f;
 float zFar = 5.0f;
 
-Color objCol(0.8f, 0.0f, 0.8f, 1.0f);
+Color objCol(1.0f, 1.0f, 1.0f, 1.0f);
 int objShine = 256;
 bool dLightStatus = false;
 Color dLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
@@ -70,7 +70,7 @@ enum test_enum {
 	Item2,
 	Item3
 };
-test_enum renderType = test_enum::Item2;
+test_enum renderType = test_enum::Item3;
 test_enum cullingType = test_enum::Item2;
 std::string modelName = "cyborg.obj";
 
@@ -188,11 +188,7 @@ int main() {
 	glGenBuffers(1, &VBO);
 	modelptr = new Model();
 	load_model("resources/objects/cyborg.obj");
-
-	// second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-	unsigned int lightVAO;
-	glGenVertexArrays(1, &lightVAO);
-	glBindVertexArray(lightVAO);
+	lightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, modelptr->maxY, modelptr->maxZ+1); //Sets point light position
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
@@ -215,7 +211,17 @@ int main() {
 		// Activates shaders with colors
 		objectShader.use();
 		objectShader.setVec3("objectColor", objCol.r(), objCol.g(), objCol.b());
-		objectShader.setVec3("lightColor", 1.0f, 1.0f, 1.0f);
+		if (pLightStatus) {
+			objectShader.setVec3("ambientLightColor", pLightAmbientCol.r(), pLightAmbientCol.g(), pLightAmbientCol.b());
+			objectShader.setVec3("diffuseLightColor", pLightDiffuseCol.r(), pLightDiffuseCol.g(), pLightDiffuseCol.b());
+			objectShader.setVec3("specularLightColor", pLightSpecularCol.r(), pLightSpecularCol.g(), pLightSpecularCol.b());
+		}
+		else {
+			objectShader.setVec3("ambientLightColor", 0, 0, 0);
+			objectShader.setVec3("diffuseLightColor", 0, 0, 0);
+			objectShader.setVec3("specularLightColor", 0, 0, 0);
+		}
+		objectShader.setInt("objShine", objShine);
 		objectShader.setVec3("lightPos", lightPos);
 		objectShader.setVec3("viewPos", camera.Position);
 
@@ -279,10 +285,6 @@ int main() {
 		pLightShader.setMat4("projection", projection);
 		pLightShader.setMat4("view", view);
 
-		glBindVertexArray(lightVAO);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-
-
 		// Swaps buffers, processes events.
 		glfwSwapBuffers(window);
 		glfwPollEvents();
@@ -290,7 +292,6 @@ int main() {
 
 	// Clean up remaining resources
 	glDeleteVertexArrays(1, &objVAO);
-	glDeleteVertexArrays(1, &lightVAO);
 	glDeleteBuffers(1, &VBO);
 	glfwTerminate();
 	return 0;
@@ -299,7 +300,6 @@ int main() {
 void load_model(const char* pathName) {
 	modelptr->loadObj(pathName);
 	camera.setNewOrigin((modelptr->maxX + modelptr->minX) / 2, (modelptr->maxY + modelptr->minY) / 2, 3);
-	lightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, (modelptr->maxY + modelptr->minY) / 2, 3);
 	// Binds Vertex Array Object first
 	glBindVertexArray(objVAO);
 
