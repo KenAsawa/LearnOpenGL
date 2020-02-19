@@ -31,7 +31,7 @@ unsigned int VBO, objVAO;
 Model* modelptr = nullptr;
 
 // Camera
-Camera camera(glm::vec3(0.0f, 0.0f, 2.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCREEN_WIDTH / 2.0f;
 float lastY = SCREEN_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -49,7 +49,7 @@ int cameraYaw = -90;
 int cameraPitch = 0;
 int cameraRoll = 0;
 float zNear = 0.4f;
-float zFar = 5.0f;
+float zFar = 15.0f;
 
 Color objCol(1.0f, 1.0f, 1.0f, 1.0f);
 int objShine = 256;
@@ -225,14 +225,11 @@ int main() {
 		objectShader.setVec3("lightPos", lightPos);
 		objectShader.setVec3("viewPos", camera.Position);
 
-		// Passes projection matrix to shader
-		glm::mat4 projection = glm::perspective(glm::radians(100.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
-
 		//Apply camera translation and rotation.
 		camera.TranslateCamera(cameraX, cameraY, cameraZ);
 		camera.RotateCamera(cameraYaw, cameraPitch, cameraRoll);
+		glm::mat4 projection = glm::perspective(glm::radians(45.0f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
 		glm::mat4 view = camera.GetViewMatrix();
-
 		objectShader.setMat4("projection", projection);
 		objectShader.setMat4("view", view);
 
@@ -299,7 +296,7 @@ int main() {
 
 void load_model(const char* pathName) {
 	modelptr->loadObj(pathName);
-	camera.setNewOrigin((modelptr->maxX + modelptr->minX) / 2, (modelptr->maxY + modelptr->minY) / 2, 3);
+	camera.setNewOrigin((modelptr->maxX + modelptr->minX) / 2, (modelptr->maxY + modelptr->minY) / 2, 6);
 	// Binds Vertex Array Object first
 	glBindVertexArray(objVAO);
 
