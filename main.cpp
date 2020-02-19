@@ -52,7 +52,7 @@ float zNear = 0.4f;
 float zFar = 15.0f;
 
 Color objCol(1.0f, 1.0f, 1.0f, 1.0f);
-int objShine = 256;
+int objShine = 16;
 bool dLightStatus = false;
 Color dLightAmbientCol(0.0f, 0.0f, 0.0f, 1.0f);
 Color dLightDiffuseCol(0.0f, 0.0f, 0.0f, 1.0f);
@@ -72,12 +72,14 @@ enum test_enum {
 };
 test_enum renderType = test_enum::Item3;
 test_enum cullingType = test_enum::Item2;
+test_enum shadingType = test_enum::Item2;
 std::string modelName = "cyborg.obj";
 
 Screen* screen = nullptr;
 
 // Lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f); // Light position will be set later
+glm::vec3 pLightPos(1.2f, 1.0f, 2.0f); // Light position will be set later
+glm::vec3 dLightDir(0.0f, -1.0f, -1.0f); // Light position will be set later
 
 int main() {
 	// Initialize GLFW to version 3.3
@@ -137,6 +139,7 @@ int main() {
 	gui->addVariable("Z Far", zFar)->setSpinnable(true);
 	gui->addVariable("Render Type", renderType, enabled)->setItems({ "Point", "Line", "Triangle" });
 	gui->addVariable("Culling Type", cullingType, enabled)->setItems({ "CW", "CCW" });
+	gui->addVariable("Shading Type", shadingType, enabled)->setItems({ "FLAT", "SMOOTH" });
 	gui->addVariable("Model Name", modelName);
 	gui->addButton("Reload model", []() {
 		// Loads inputted model
@@ -178,7 +181,6 @@ int main() {
 	// Sets size of points when rendering as points
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glPointSize(2.0);
-
 	// build and compile our shader program
 	Shader objectShader("shader.vs", "shader.fs");
 	Shader pLightShader("lighting.vs", "lighting.fs");
@@ -188,7 +190,7 @@ int main() {
 	glGenBuffers(1, &VBO);
 	modelptr = new Model();
 	load_model("resources/objects/cyborg.obj");
-	lightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, modelptr->maxY, modelptr->maxZ+1); //Sets point light position
+	pLightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, modelptr->maxY, modelptr->maxZ+1); //Sets point light position
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
@@ -208,22 +210,39 @@ int main() {
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+		if (shadingType == 0) {
+			glShadeModel(GL_FLAT);
+		} else {
+			glShadeModel(GL_SMOOTH);
+		}
+
 		// Activates shaders with colors
 		objectShader.use();
 		objectShader.setVec3("objectColor", objCol.r(), objCol.g(), objCol.b());
+		objectShader.setInt("objectShine", objShine);
+		objectShader.setVec3("viewPos", camera.Position);
 		if (pLightStatus) {
-			objectShader.setVec3("ambientLightColor", pLightAmbientCol.r(), pLightAmbientCol.g(), pLightAmbientCol.b());
-			objectShader.setVec3("diffuseLightColor", pLightDiffuseCol.r(), pLightDiffuseCol.g(), pLightDiffuseCol.b());
-			objectShader.setVec3("specularLightColor", pLightSpecularCol.r(), pLightSpecularCol.g(), pLightSpecularCol.b());
+			objectShader.setVec3("pointLight.position", pLightPos);
+			objectShader.setVec3("pointLight.ambientLightColor", pLightAmbientCol.r(), pLightAmbientCol.g(), pLightAmbientCol.b());
+			objectShader.setVec3("pointLight.diffuseLightColor", pLightDiffuseCol.r(), pLightDiffuseCol.g(), pLightDiffuseCol.b());
+			objectShader.setVec3("pointLight.specularLightColor", pLightSpecularCol.r(), pLightSpecularCol.g(), pLightSpecularCol.b());
 		}
 		else {
-			objectShader.setVec3("ambientLightColor", 0, 0, 0);
-			objectShader.setVec3("diffuseLightColor", 0, 0, 0);
-			objectShader.setVec3("specularLightColor", 0, 0, 0);
+			objectShader.setVec3("pointLight.ambientLightColor", 0,0,0);
+			objectShader.setVec3("pointLight.diffuseLightColor", 0, 0, 0);
+			objectShader.setVec3("pointLight.specularLightColor", 0, 0, 0);
 		}
-		objectShader.setInt("objShine", objShine);
-		objectShader.setVec3("lightPos", lightPos);
-		objectShader.setVec3("viewPos", camera.Position);
+		if (dLightStatus) {
+			objectShader.setVec3("dirLight.direction", dLightDir);
+			objectShader.setVec3("dirLight.ambientLightColor", dLightAmbientCol.r(), dLightAmbientCol.g(), dLightAmbientCol.b());
+			objectShader.setVec3("dirLight.diffuseLightColor", dLightDiffuseCol.r(), dLightDiffuseCol.g(), dLightDiffuseCol.b());
+			objectShader.setVec3("dirLight.specularLightColor", dLightSpecularCol.r(), dLightSpecularCol.g(), dLightSpecularCol.b());
+		}
+		else {
+			objectShader.setVec3("dirLight.ambientLightColor", 0, 0, 0);
+			objectShader.setVec3("dirLight.diffuseLightColor", 0, 0, 0);
+			objectShader.setVec3("dirLight.specularLightColor", 0, 0, 0);
+		}
 
 		//Apply camera translation and rotation.
 		camera.TranslateCamera(cameraX, cameraY, cameraZ);
@@ -324,7 +343,7 @@ void resetVariables() {
 	cameraPitch = 0;
 	cameraRoll = 0;
 	zNear = 0.4f;
-	zFar = 5.0f;
+	zFar = 15.0f;
 }
 
 // Callbacks listen for inputs.

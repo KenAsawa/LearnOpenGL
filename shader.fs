@@ -1,37 +1,69 @@
 #version 330 core
 out vec4 FragColor;
 
+struct DirLight {
+    vec3 direction;
+
+    vec3 ambientLightColor;
+    vec3 diffuseLightColor;
+    vec3 specularLightColor;
+};
+
+struct PointLight {
+    vec3 position;
+
+    vec3 ambientLightColor;
+    vec3 diffuseLightColor;
+    vec3 specularLightColor;
+};
+
 in vec3 FragPos;
 in vec3 Normal;
-in vec3 LightPos;   // extra in variable, since we need the light position in view space we calculate this in the vertex shader
 
+uniform vec3 viewPos;
 uniform vec3 objectColor;
-uniform vec3 ambientLightColor;
-uniform vec3 diffuseLightColor;
-uniform vec3 specularLightColor;
-uniform int objShine;
+uniform int objectShine;
+uniform DirLight dirLight;
+uniform PointLight pointLight;
+
+// function prototypes
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
 
 void main()
 {
-    // ambient
-    float ambientStrength = 0.1;
-    vec3 ambient = ambientStrength * ambientLightColor;    
-    
-     // diffuse 
     vec3 norm = normalize(Normal);
-    vec3 lightDir = normalize(LightPos - FragPos);
-    float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = diff * diffuseLightColor;
-    
-    // specular
-    float specularStrength = 0.5;
-    vec3 viewDir = normalize(-FragPos); // the viewer is always at (0,0,0) in view-space, so viewDir is (0,0,0) - Position => -Position
-    //vec3 reflectDir = reflect(-lightDir, norm); // We use halfway vector instead
-    //float spec = pow(max(dot(viewDir, reflectDir), 0.0), objShine); // We use halfway vector instead
-    vec3 halfwayDir = normalize(lightDir + viewDir);
-    float spec = pow(max(dot(Normal, halfwayDir), 0.0), objShine);
-    vec3 specular = specularStrength * spec * specularLightColor; 
-    
-    vec3 result = (ambient + diffuse + specular) * objectColor;
+    vec3 viewDir = normalize(-FragPos);
+    vec3 result = (CalcDirLight(dirLight, norm, viewDir) +  CalcPointLight(pointLight, norm, FragPos, viewDir)) * objectColor;
     FragColor = vec4(result, 1.0);
+}
+
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
+{
+    vec3 lightDir = normalize(-light.direction);
+    // diffuse shading
+    float diff = max(dot(normal, lightDir), 0.0);
+    // specular shading
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(Normal, halfwayDir), 0.0), objectShine);
+    // combine results
+    vec3 ambient = 0.1 * light.ambientLightColor;
+    vec3 diffuse = diff * light.diffuseLightColor;
+    vec3 specular = 0.5 * spec * light.specularLightColor;
+    return (ambient + diffuse + specular);
+}
+
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
+{
+    vec3 lightDir = normalize(light.position - fragPos);
+    // diffuse shading
+    float diff = max(dot(normal, lightDir), 0.0);
+    // specular shading
+    vec3 halfwayDir = normalize(lightDir + viewDir);
+    float spec = pow(max(dot(Normal, halfwayDir), 0.0), objectShine);
+    // combine results
+    vec3 ambient = 0.1 * light.ambientLightColor;
+    vec3 diffuse = diff * light.diffuseLightColor;
+    vec3 specular = 0.5 * spec * light.specularLightColor;
+    return (ambient + diffuse + specular);
 }
