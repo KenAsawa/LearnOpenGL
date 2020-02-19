@@ -73,13 +73,14 @@ enum test_enum {
 test_enum renderType = test_enum::Item3;
 test_enum cullingType = test_enum::Item2;
 test_enum shadingType = test_enum::Item2;
+test_enum depthType = test_enum::Item1;
 std::string modelName = "cyborg.obj";
 
 Screen* screen = nullptr;
 
 // Lighting
 glm::vec3 pLightPos(1.2f, 1.0f, 2.0f); // Light position will be set later
-glm::vec3 dLightDir(0.0f, -1.0f, -1.0f); // Light position will be set later
+glm::vec3 dLightDir(0.0f, -1.0f, -1.0f); // Directional light direction
 
 int main() {
 	// Initialize GLFW to version 3.3
@@ -140,6 +141,7 @@ int main() {
 	gui->addVariable("Render Type", renderType, enabled)->setItems({ "Point", "Line", "Triangle" });
 	gui->addVariable("Culling Type", cullingType, enabled)->setItems({ "CW", "CCW" });
 	gui->addVariable("Shading Type", shadingType, enabled)->setItems({ "FLAT", "SMOOTH" });
+	gui->addVariable("Depth Type", depthType, enabled)->setItems({ "LESS", "ALWAYS" });
 	gui->addVariable("Model Name", modelName);
 	gui->addButton("Reload model", []() {
 		// Loads inputted model
@@ -176,8 +178,6 @@ int main() {
 	glewExperimental = GL_TRUE;
 	// Initialize GLEW to setup the OpenGL Function pointers
 	glewInit();
-
-	glEnable(GL_DEPTH_TEST);
 	// Sets size of points when rendering as points
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glPointSize(2.0);
@@ -190,7 +190,6 @@ int main() {
 	glGenBuffers(1, &VBO);
 	modelptr = new Model();
 	load_model("resources/objects/cyborg.obj");
-	pLightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, modelptr->maxY, modelptr->maxZ+1); //Sets point light position
 
 	glBindBuffer(GL_ARRAY_BUFFER, VBO);
 	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
@@ -206,7 +205,14 @@ int main() {
 		lastFrame = currentFrame;
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-		glEnable(GL_DEPTH_TEST);
+		glEnable(GL_DEPTH_TEST); // Enables depth test
+		// Sets depth test type
+		if (depthType == 1) {
+			glDepthFunc(GL_LESS);
+		}
+		else {
+			glDepthFunc(GL_ALWAYS);
+		}
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -215,6 +221,14 @@ int main() {
 		} else {
 			glShadeModel(GL_SMOOTH);
 		}
+
+		//float radius = (modelptr->maxX + modelptr->minX) / 2;
+		//float radius = 5;
+		//float lightPosX = sin(glfwGetTime()) * radius;
+		//float lightPosY = sin(glfwGetTime()) * radius + cos(glfwGetTime()) * radius;
+		//float lightPosZ = cos(glfwGetTime()) * radius;
+		//pLightPos = glm::vec3(lightPosX, lightPosY, lightPosZ); //Sets point light position
+		pLightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, modelptr->maxY, modelptr->maxZ + 1); //Sets point light position
 
 		// Activates shaders with colors
 		objectShader.use();
@@ -291,15 +305,15 @@ int main() {
 			glDrawArrays(GL_TRIANGLES, 0, modelptr->vertices.size()); // Render as lines
 		}
 
+		// Render's the light.
+		pLightShader.use();
+		pLightShader.setMat4("projection", projection);
+		pLightShader.setMat4("view", view);
+
 		// Draws GUI
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		screen->drawWidgets();
 		gui->refresh();
-
-		// Render's the pointLight's light.
-		pLightShader.use();
-		pLightShader.setMat4("projection", projection);
-		pLightShader.setMat4("view", view);
 
 		// Swaps buffers, processes events.
 		glfwSwapBuffers(window);
