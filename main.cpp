@@ -73,7 +73,7 @@ enum test_enum {
 test_enum renderType = test_enum::Item3;
 test_enum cullingType = test_enum::Item2;
 test_enum shadingType = test_enum::Item2;
-test_enum depthType = test_enum::Item1;
+test_enum depthType = test_enum::Item2;
 std::string modelName = "cyborg.obj";
 
 Screen* screen = nullptr;
@@ -216,25 +216,28 @@ int main() {
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		if (shadingType == 0) {
-			glShadeModel(GL_FLAT);
-		} else {
-			glShadeModel(GL_SMOOTH);
-		}
 
 		//float radius = (modelptr->maxX + modelptr->minX) / 2;
-		//float radius = 5;
-		//float lightPosX = sin(glfwGetTime()) * radius;
-		//float lightPosY = sin(glfwGetTime()) * radius + cos(glfwGetTime()) * radius;
+		float radius = 5;
+		float lightPosX = sin(glfwGetTime()) * radius;
+		float lightPosY = cos(glfwGetTime()) * radius;
 		//float lightPosZ = cos(glfwGetTime()) * radius;
 		//pLightPos = glm::vec3(lightPosX, lightPosY, lightPosZ); //Sets point light position
-		pLightPos = glm::vec3((modelptr->maxX + modelptr->minX) / 2, modelptr->maxY, modelptr->maxZ + 1); //Sets point light position
+		pLightPos = glm::vec3((modelptr->maxX + modelptr->minX)/2 + lightPosX, modelptr->maxY + lightPosY, modelptr->maxZ + 1); //Sets point light position
 
 		// Activates shaders with colors
 		objectShader.use();
+		if (shadingType == 0) {
+			objectShader.setBool("applySmoothing", false);
+		}
+		else if (shadingType == 1) {
+			objectShader.setBool("applySmoothing", true);
+		}
+
 		objectShader.setVec3("objectColor", objCol.r(), objCol.g(), objCol.b());
 		objectShader.setInt("objectShine", objShine);
 		objectShader.setVec3("viewPos", camera.Position);
+
 		if (pLightStatus) {
 			objectShader.setVec3("pointLight.position", pLightPos);
 			objectShader.setVec3("pointLight.ambientLightColor", pLightAmbientCol.r(), pLightAmbientCol.g(), pLightAmbientCol.b());
