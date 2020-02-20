@@ -6,6 +6,7 @@
 #include <GLFW/glfw3.h>
 
 #include <iostream>
+#include <math.h>
 #include "nanogui/nanogui.h"
 #include <stb_image.h>
 #include <glm/glm.hpp>
@@ -64,6 +65,10 @@ Color pLightSpecularCol(0.0f, 0.0f, 0.0f, 1.0f);
 bool pLightRotateX = false;
 bool pLightRotateY = false;
 bool pLightRotateZ = false;
+float pLightRadius = 5;
+float pLightAngleX = 0;
+float pLightAngleY = 0;
+float pLightAngleZ = 0;
 
 enum test_enum {
 	Item1,
@@ -170,6 +175,12 @@ int main() {
 	gui->addVariable("Point Light Rotate on X", pLightRotateX);
 	gui->addVariable("Point Light Rotate on Y", pLightRotateY);
 	gui->addVariable("Point Light Rotate on Z", pLightRotateZ);
+	gui->addButton("Reset Point Light", []() {
+		// Loads inputted model
+		pLightAngleX = 0;
+		pLightAngleY = 0;
+		pLightAngleZ = 0;
+		});
 	screen->setVisible(true);
 	screen->performLayout();
 	//End of nanogui gui
@@ -216,14 +227,20 @@ int main() {
 		glEnable(GL_CULL_FACE); //Activates back-face culling.
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
-		//float radius = (modelptr->maxX + modelptr->minX) / 2;
-		float radius = 5;
-		float lightPosX = sin(glfwGetTime()) * radius;
-		float lightPosY = cos(glfwGetTime()) * radius;
-		//float lightPosZ = cos(glfwGetTime()) * radius;
-		//pLightPos = glm::vec3(lightPosX, lightPosY, lightPosZ); //Sets point light position
-		pLightPos = glm::vec3((modelptr->maxX + modelptr->minX)/2 + lightPosX, modelptr->maxY + lightPosY, modelptr->maxZ + 1); //Sets point light position
+		pLightRadius = modelptr->maxY * 1.25;
+		if (pLightRotateX) {
+			pLightAngleX += M_PI / 1600;
+		}
+		if (pLightRotateY) {
+			pLightAngleY += M_PI / 1600;
+		}
+		if (pLightRotateZ) {
+			pLightAngleZ += M_PI / 1600;
+		}
+		float lightPosX = (sin(pLightAngleX)+cos(pLightAngleY)-1) * pLightRadius;
+		float lightPosY = (sin(pLightAngleZ)+cos(pLightAngleX)-1) * pLightRadius;
+		float lightPosZ = (sin(pLightAngleY)+cos(pLightAngleZ)-1) * pLightRadius;
+		pLightPos = glm::vec3((modelptr->maxX + modelptr->minX)/2 + lightPosX, (modelptr->maxY + modelptr->minY) / 2 + lightPosY, modelptr->maxZ + 1 + lightPosZ); //Sets point light position
 
 		// Activates shaders with colors
 		objectShader.use();
