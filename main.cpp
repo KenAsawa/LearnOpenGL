@@ -4,9 +4,7 @@
 
 // GLFW
 #include <GLFW/glfw3.h>
-
 #include <iostream>
-#include <math.h>
 #include "nanogui/nanogui.h"
 #include <stb_image.h>
 #include <glm/glm.hpp>
@@ -36,10 +34,6 @@ Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCREEN_WIDTH / 2.0f;
 float lastY = SCREEN_HEIGHT / 2.0f;
 bool firstMouse = true;
-
-// Timing
-float deltaTime = 0.0f;		// Time between current frame and last frame
-float lastFrame = 0.0f;
 
 //GUI stuff
 using namespace nanogui;
@@ -195,26 +189,15 @@ int main() {
 	// build and compile our shader program
 	Shader objectShader("shader.vs", "shader.fs");
 	Shader pLightShader("lighting.vs", "lighting.fs");
-
-	// first, configure the cube's VAO (and VBO)
+	modelptr = new Model();
+	// Configure the VAO and VBO
 	glGenVertexArrays(1, &objVAO);
 	glGenBuffers(1, &VBO);
-	modelptr = new Model();
+	
 	load_model("resources/objects/cyborg.obj");
-
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	// note that we update the lamp's position attribute's stride to reflect the updated buffer data
-	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-	glEnableVertexAttribArray(0);
 
 	// Game Loop
 	while (!glfwWindowShouldClose(window)) {
-
-		// Per-frame time logic
-		float currentFrame = glfwGetTime();
-		deltaTime = currentFrame - lastFrame;
-		lastFrame = currentFrame;
-
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 		glEnable(GL_DEPTH_TEST); // Enables depth test
 		// Sets depth test type
@@ -307,10 +290,6 @@ int main() {
 		else {
 			std::cout << "Invalid render mode" << std::endl;
 		}
-
-		// world transformation
-		glm::mat4 model = glm::mat4(1.0f);
-		objectShader.setMat4("model", model);
 
 		glBindVertexArray(objVAO); //Binds VAO
 		glm::mat4 modelObj = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
