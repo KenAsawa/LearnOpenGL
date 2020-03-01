@@ -1,31 +1,38 @@
 #version 330 core
-layout (location = 0) in vec3 aPos;
-layout (location = 1) in vec3 aNormal;
+  
+layout (location = 0) in vec3 position;
+layout(location = 1) in vec3 normals;
 
-flat out vec3 fFragPos;
-flat out vec3 fNormal;
-smooth out vec3 sFragPos;
-smooth out vec3 sNormal;
-out vec3 LightPos;
+uniform mat4 vm;
+uniform mat4 pm;
+uniform mat4 mm;
 
-uniform vec3 lightPos; // we now define the uniform in the vertex shader and pass the 'view space' lightpos to the fragment shader. lightPos is currently in world space.
-uniform bool applySmoothing;
-uniform mat4 model;
-uniform mat4 view;
-uniform mat4 projection;
+uniform vec3 light_color;
+uniform vec3 light_position;
+uniform vec3 object_color;
+uniform vec3 view_position;
+uniform bool colour;
+uniform bool flag;
+uniform bool lights;
+uniform bool normalcol;
+uniform bool greyscale;
+uniform bool red;
+uniform bool green;
+uniform bool blue;
+
+flat out vec3 fragment_position;
+flat out vec3 normal;
+
+smooth out vec3 fragment_positionS;
+smooth out vec3 normalS;
+
+flat out vec3 col;
 
 void main()
 {
-    if(applySmoothing){
-        gl_Position = projection * view * model * vec4(aPos, 1.0);
-        sFragPos = vec3(view * model * vec4(aPos, 1.0));
-        sNormal = mat3(transpose(inverse(view * model))) * aNormal;
-        LightPos = vec3(view * vec4(lightPos, 1.0)); // Transform world-space light position to view-space light position
-	}else{
-        gl_Position = projection * view * model * vec4(aPos, 1.0);
-        fFragPos = vec3(view * model * vec4(aPos, 1.0));
-        fNormal = mat3(transpose(inverse(view * model))) * aNormal;
-        LightPos = vec3(view * vec4(lightPos, 1.0)); // Transform world-space light position to view-space light position
-	}
-
+	normal = mat3(transpose(inverse(mm))) * normals;
+	normalS = mat3(transpose(inverse(mm))) * normals;
+	fragment_position = vec3(mm * vec4(position, 1.0f));
+	fragment_positionS = vec3(mm * vec4(position, 1.0f));
+	gl_Position = pm * vm * mm * vec4(position, 1.0);
 }
