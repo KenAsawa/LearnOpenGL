@@ -21,7 +21,7 @@ void mouse_button_callback(GLFWwindow*, int button, int action, int modifiers);
 void key_callback(GLFWwindow*, int key, int scancode, int action, int mods);
 void char_callback(GLFWwindow*, unsigned int codepoint);
 
-const unsigned int SCREEN_WIDTH = 1200;
+const unsigned int SCREEN_WIDTH = 1600;
 const unsigned int SCREEN_HEIGHT = 900;
 
 // Variables for the GUI
@@ -41,7 +41,7 @@ float zFar = 15.0f;
 float rotateValue = 5.0f;
 
 Color modelColor(1.0f, 1.0f, 1.0f, 1.0f);
-int modelShine = 32;
+int objectShine = 32;
 bool directionalLightStatus = false;
 bool positionalLightStatus = false;
 
@@ -90,21 +90,10 @@ glm::mat4 model = glm::mat4(1.0f); //to apply scalor and rotational transformati
 glm::mat4 model_original = glm::mat4(1.0f); //to apply scalor and rotational transformations
 glm::vec3 modl_move = glm::vec3(0, 0, 0); //to apply translational transformations
 
-//color settings
-bool flag = false;
-bool lights = false;
-bool normalcol = false;
-bool greyscale = false;
-bool red = false;
-bool green = false;
-bool blue = false;
-bool colour = false;
-
 GLuint vertices_VBO;
 GLuint VAO;
 GLuint normals_VBO;
 GLuint EBO;
-
 
 std::vector<int> indices;
 std::vector<glm::vec3> vertices;
@@ -112,7 +101,6 @@ std::vector<glm::vec3> normals;
 std::vector<glm::vec2> UVs;
 
 void resetCamera() {
-
 	translateX = 0.0f;
 	translateY = 0.0f;
 	translateZ = 0.0f;
@@ -131,27 +119,12 @@ void resetCamera() {
 
 	model = model_original;
 	gui->refresh();
-
 }
 
 void recalculateVectors() {
 	modl_move.y = translateY;
 	modl_move.x = translateX;
 	modl_move.z = translateZ;
-
-	//// Yaw, Pitch, Roll
-	//if (offsetYaw != prevYaw) {
-	//	model = glm::rotate(model, glm::radians(offsetYaw), glm::vec3(1, 0, 0));
-	//	prevYaw = offsetYaw;
-	//}
-	//if (offsetPitch != prevPitch) {
-	//	model = glm::rotate(model, glm::radians(offsetPitch), glm::vec3(0, 0, 1));
-	//	prevPitch = offsetPitch;
-	//}
-	//if (offsetRoll != prevRoll) {
-	//	model = glm::rotate(model, glm::radians(offsetRoll), glm::vec3(0, 1, 0));
-	//	prevRoll = offsetRoll;
-	//}
 }
 
 void reloadModel(const char* pathName) {
@@ -270,7 +243,6 @@ int main() {
 		model = glm::rotate(model, glm::radians(-rotateValue), glm::vec3(0, 1, 0));
 		});
 
-
 	gui->addGroup("Configuration");
 	gui->addVariable("Z Near", zNear)->setSpinnable(true);
 	gui->addVariable("Z Far", zFar)->setSpinnable(true);
@@ -293,7 +265,7 @@ int main() {
 	gui->addWindow(Eigen::Vector2i(210, 10), "Control Bar 2");
 	gui->addGroup("Lighting");
 	gui->addVariable("Object Color:", modelColor);
-	gui->addVariable("Object Shininess", modelShine);
+	gui->addVariable("Object Shininess", objectShine);
 	gui->addVariable("Direction Light Status", directionalLightStatus);
 	gui->addVariable("Direction Light Ambient Color", directionalLightAmbientColor);
 	gui->addVariable("Direction Light Diffuse Color", directionalLightDiffuseColor);
@@ -319,23 +291,21 @@ int main() {
 	glEnable(GL_DEPTH_TEST);
 
 
-	// Sets size of points when rendering as points
+	//Sets size of points when rendering as points
 	glEnable(GL_PROGRAM_POINT_SIZE);
 	glPointSize(2.0);
 
-	//Build and compile our shader program
-	//Vertex shader
-
+	//Build and compile shader
 	GLuint shader = loadSHADER("shader.vs", "shader.fs");
 	glUseProgram(shader);
 
-	// If this path is wrong it causes nanogui to fail and show a white screen
+	//Loads model
 	loadOBJ("resources/objects/cyborg.obj", indices, vertices, normals, UVs);
 
+	//Bind VAO
 	glGenVertexArrays(1, &VAO);
-	// Bind the Vertex Array Object first, then bind and set vertex buffer(s) and attribute pointer(s).
-	glBindVertexArray(VAO); //if you take this off nothing will show up because you haven't linked the VAO to the VBO
-							//you have to bind before putting the point
+	//Link VAO to VBO
+	glBindVertexArray(VAO);
 
 	glGenBuffers(1, &vertices_VBO);
 	glBindBuffer(GL_ARRAY_BUFFER, vertices_VBO);
@@ -355,104 +325,74 @@ int main() {
 	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
 	glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(int), &indices.front(), GL_STATIC_DRAW);
 
-	glBindVertexArray(0); // Unbind VAO (it's always a good thing to unbind any buffer/array to prevent strange bugs), remember: do NOT unbind the EBO, keep it bound to this VAO
+	//Unbind VAO
+	glBindVertexArray(0);
 
-	//glm is a math funtion
-	glm::mat4 modl_matrix = glm::translate(glm::mat4(1.f), glm::vec3(3, 0, 0));
-	glm::mat4 view_matrix = glm::lookAt(cam_pos, cam_dir, cam_up);
-	glm::mat4 proj_matrix = glm::perspective(glm::radians(45.f), 1.f, zNear, zFar); //perspective view. Third parameter should be > 0, or else errors
+	glm::mat4 modelMatrix = glm::translate(glm::mat4(1.f), glm::vec3(3, 0, 0));
+	glm::mat4 viewMatrix = glm::lookAt(cam_pos, cam_dir, cam_up);
+	glm::mat4 projectionMatrix = glm::perspective(glm::radians(45.f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar); //perspective view. Third parameter should be > 0, or else errors
 	glEnable(GL_DEPTH_TEST); //remove surfaces beyond the cameras render distance
 
-	GLuint vm_loc = glGetUniformLocation(shader, "vm");
-	GLuint pm_loc = glGetUniformLocation(shader, "pm");
-	GLuint mm_loc = glGetUniformLocation(shader, "mm");
-	//GLuint flag_id = glGetUniformLocation(shader, "flag");
-	//GLuint lights_id = glGetUniformLocation(shader, "lights");
-	//GLuint normalcol_id = glGetUniformLocation(shader, "normalcol");
-	//GLuint greyscale_id = glGetUniformLocation(shader, "greyscale");
-	//GLuint red_id = glGetUniformLocation(shader, "red");
-	//GLuint green_id = glGetUniformLocation(shader, "green");
-	//GLuint blue_id = glGetUniformLocation(shader, "blue");
-	//GLuint colour_id = glGetUniformLocation(shader, "colour");
+	GLuint vm_loc = glGetUniformLocation(shader, "viewMatrix");
+	GLuint pm_loc = glGetUniformLocation(shader, "projectionMatrix");
+	GLuint mm_loc = glGetUniformLocation(shader, "modelMatrix");
 
-	//glUniformMatrix4fv(vm_loc, 1, GL_FALSE, &view_matrix[0][0]); OR
-	glUniformMatrix4fv(vm_loc, 1, GL_FALSE, glm::value_ptr(view_matrix));
-	glUniformMatrix4fv(pm_loc, 1, GL_FALSE, glm::value_ptr(proj_matrix));
-	glUniformMatrix4fv(mm_loc, 1, GL_FALSE, glm::value_ptr(modl_matrix));
+	glUniformMatrix4fv(vm_loc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+	glUniformMatrix4fv(pm_loc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+	glUniformMatrix4fv(mm_loc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
 	glUniform3fv(glGetUniformLocation(shader, "light_color"), 1, glm::value_ptr(glm::vec3(0.8, 0.8, 0.8)));
 	glUniform3fv(glGetUniformLocation(shader, "light_position"), 1, glm::value_ptr(glm::vec3(0.0f, 0.0f, 0.0f)));
 	glUniform3fv(glGetUniformLocation(shader, "object_color"), 1, glm::value_ptr(glm::vec3(0.5, 0.5, 0.5)));
 	glUniform3fv(glGetUniformLocation(shader, "view_position"), 1, glm::value_ptr(glm::vec3(cam_pos)));
 
-
-
 	// Game Loop
 	while (!glfwWindowShouldClose(window)) {
-
 		recalculateVectors();
 
-		proj_matrix = glm::perspective(glm::radians(45.f), 1.f, zNear, zFar);
-		view_matrix = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);
+		projectionMatrix = glm::perspective(glm::radians(45.f), (float)SCREEN_WIDTH / (float)SCREEN_HEIGHT, zNear, zFar);
+		viewMatrix = glm::lookAt(cam_pos, cam_pos + cam_dir, cam_up);
 
-
-		//glUniformMatrix4fv(vm_loc, 1, 0, glm::value_ptr(view_matrix));
-
-		//glm::mat4 rotator = glm::rotate(glm::mat4(1.0f), i / 200.f, glm::vec3(1, 0, 0));
 		glm::mat4 translator = glm::translate(glm::mat4(1.0f), modl_move);
-		//glm::mat4 scalor = glm::scale(glm::mat4(1.0f), glm::vec3(1, 1, 1));
-		modl_matrix = translator * model;
-
+		modelMatrix = translator * model;
 
 		glUseProgram(shader);
-		vm_loc = glGetUniformLocation(shader, "vm");
-		pm_loc = glGetUniformLocation(shader, "pm");
-		mm_loc = glGetUniformLocation(shader, "mm");
-		GLuint flag_id = glGetUniformLocation(shader, "flag");
-		GLuint lights_id = glGetUniformLocation(shader, "lights");
-		GLuint normalcol_id = glGetUniformLocation(shader, "l");
-		GLuint greyscale_id = glGetUniformLocation(shader, "greyscale");
-		GLuint red_id = glGetUniformLocation(shader, "red");
-		GLuint green_id = glGetUniformLocation(shader, "green");
-		GLuint blue_id = glGetUniformLocation(shader, "blue");
-		GLuint colour_id = glGetUniformLocation(shader, "colour");
-		GLuint shinyness = glGetUniformLocation(shader, "shinyness");
-		GLuint isSmooth = glGetUniformLocation(shader, "isSmooth");
+		vm_loc = glGetUniformLocation(shader, "viewMatrix");
+		pm_loc = glGetUniformLocation(shader, "projectionMatrix");
+		mm_loc = glGetUniformLocation(shader, "modelMatrix");
+		GLuint objectShine = glGetUniformLocation(shader, "objectShine");
+		GLuint applySmoothing = glGetUniformLocation(shader, "applySmoothing");
 
-		GLuint isPosLightOn = glGetUniformLocation(shader, "isPosLightOn");
+		GLuint posLightStatus = glGetUniformLocation(shader, "posLightStatus");
 		GLuint posAmbientLightColor = glGetUniformLocation(shader, "posAmbientLightColor");
 		GLuint posDiffuseLightColor = glGetUniformLocation(shader, "posDiffuseLightColor");
 		GLuint posSpecularLightColor = glGetUniformLocation(shader, "posSpecularLightColor");
 
-		GLuint isDirLightOn = glGetUniformLocation(shader, "isDirLightOn");
+		GLuint dirLightStatus = glGetUniformLocation(shader, "dirLightStatus");
 		GLuint dirAmbientLightColor = glGetUniformLocation(shader, "dirLightAmbientColor");
 		GLuint dirDiffuseLightColor = glGetUniformLocation(shader, "dirLightDiffuseColor");
 		GLuint dirSpecularLightColor = glGetUniformLocation(shader, "dirLightSpecularColor");
 		GLuint dirLightDirection = glGetUniformLocation(shader, "dirLightDirection");
 
-		//glUniformMatrix4fv(vm_loc, 1, GL_FALSE, &view_matrix[0][0]); OR
-		glUniformMatrix4fv(vm_loc, 1, GL_FALSE, glm::value_ptr(view_matrix));
-		glUniformMatrix4fv(pm_loc, 1, GL_FALSE, glm::value_ptr(proj_matrix));
-		glUniformMatrix4fv(mm_loc, 1, GL_FALSE, glm::value_ptr(modl_matrix));
+		glUniformMatrix4fv(vm_loc, 1, GL_FALSE, glm::value_ptr(viewMatrix));
+		glUniformMatrix4fv(pm_loc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
+		glUniformMatrix4fv(mm_loc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-		glUniform1i(shinyness, modelShine);
-		glUniform1i(isSmooth, (int)shadingType);
+		glUniform1i(objectShine, objectShine);
+		glUniform1i(applySmoothing, (int)shadingType);
 
-		glUniform1i(isPosLightOn, (int)positionalLightStatus);
+		glUniform1i(posLightStatus, (int)positionalLightStatus);
 		glUniform3fv(posAmbientLightColor, 1, glm::value_ptr(glm::vec3(positionalLightAmbientColor.r(), positionalLightAmbientColor.g(), positionalLightAmbientColor.b())));
 		glUniform3fv(posDiffuseLightColor, 1, glm::value_ptr(glm::vec3(positionalLightDiffuseColor.r(), positionalLightDiffuseColor.g(), positionalLightDiffuseColor.b())));
 		glUniform3fv(posSpecularLightColor, 1, glm::value_ptr(glm::vec3(positionalLightSpecularColor.r(), positionalLightSpecularColor.g(), positionalLightSpecularColor.b())));
 
-		glUniform1i(isDirLightOn, (int)directionalLightStatus);
+		glUniform1i(dirLightStatus, (int)directionalLightStatus);
 		glUniform3fv(dirAmbientLightColor, 1, glm::value_ptr(glm::vec3(directionalLightAmbientColor.r(), directionalLightAmbientColor.g(), directionalLightAmbientColor.b())));
 		glUniform3fv(dirDiffuseLightColor, 1, glm::value_ptr(glm::vec3(directionalLightDiffuseColor.r(), directionalLightDiffuseColor.g(), directionalLightDiffuseColor.b())));
 		glUniform3fv(dirSpecularLightColor, 1, glm::value_ptr(glm::vec3(directionalLightSpecularColor.r(), directionalLightSpecularColor.g(), directionalLightSpecularColor.b())));
 		glUniform3fv(dirLightDirection, 1, glm::value_ptr(glm::vec3(0.0f, -1.0f, -1.0f)));
 
-
 		glUniform3fv(glGetUniformLocation(shader, "view_position"), 1, glm::value_ptr(glm::vec3(cam_pos)));
-		glUniform3fv(glGetUniformLocation(shader, "view_position"), 1, glm::value_ptr(glm::vec3(cam_pos)));
-
 		glUniform3fv(glGetUniformLocation(shader, "light_color"), 1, glm::value_ptr(glm::vec3(1.0, 1.0, 1.0)));
 
 		if (rotatePositionalLightX) {
@@ -473,26 +413,13 @@ int main() {
 		glUniform3fv(glGetUniformLocation(shader, "object_color"), 1, glm::value_ptr(glm::vec3(modelColor.r(), modelColor.g(), modelColor.b())));
 		glUniform3fv(glGetUniformLocation(shader, "view_position"), 1, glm::value_ptr(glm::vec3(cam_pos)));
 
-
-
-		glUniformMatrix4fv(vm_loc, 1, 0, glm::value_ptr(view_matrix));
-		glUniformMatrix4fv(mm_loc, 1, 0, glm::value_ptr(modl_matrix));
+		glUniformMatrix4fv(vm_loc, 1, 0, glm::value_ptr(viewMatrix));
+		glUniformMatrix4fv(mm_loc, 1, 0, glm::value_ptr(modelMatrix));
 
 		//glUniform3fv(object_color_id, 1, glm::value_ptr(object_color));
-		glUniform1i(flag_id, flag);
-		glUniform1i(lights_id, lights);
-		glUniform1i(normalcol_id, normalcol);
-		glUniform1i(greyscale_id, greyscale);
-		glUniform1i(red_id, red);
-		glUniform1i(green_id, green);
-		glUniform1i(blue_id, blue);
-		glUniform1i(colour_id, colour);
 
-		// Render
-		// Clear the colorbuffer
-
-		// Basic setup for depth and rendering
 		glClearColor(0.3f, 0.3f, 0.3f, 1.0f);
+		// Set depth type
 		glEnable(GL_DEPTH_TEST);
 		if (depthType == 1) {
 			glDepthFunc(GL_LESS);
@@ -500,9 +427,9 @@ int main() {
 		else {
 			glDepthFunc(GL_ALWAYS);
 		}
+		// Enable back-face culling
 		glEnable(GL_CULL_FACE);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
 
 		// Sets culling mode for model
 		if (cullingType == 0) {
@@ -558,7 +485,6 @@ int main() {
 	glfwTerminate();
 	return 0;
 }
-
 
 
 // Callbacks listen for inputs.
