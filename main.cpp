@@ -360,7 +360,7 @@ int main() {
 		vm_loc = glGetUniformLocation(shader, "viewMatrix");
 		pm_loc = glGetUniformLocation(shader, "projectionMatrix");
 		mm_loc = glGetUniformLocation(shader, "modelMatrix");
-		GLuint objectShine = glGetUniformLocation(shader, "objectShine");
+		GLuint shininess = glGetUniformLocation(shader, "shininess");
 		GLuint applySmoothing = glGetUniformLocation(shader, "applySmoothing");
 
 		GLuint posLightStatus = glGetUniformLocation(shader, "posLightStatus");
@@ -378,7 +378,7 @@ int main() {
 		glUniformMatrix4fv(pm_loc, 1, GL_FALSE, glm::value_ptr(projectionMatrix));
 		glUniformMatrix4fv(mm_loc, 1, GL_FALSE, glm::value_ptr(modelMatrix));
 
-		glUniform1i(objectShine, objectShine);
+		glUniform1i(shininess, objectShine);
 		glUniform1i(applySmoothing, (int)shadingType);
 
 		glUniform1i(posLightStatus, (int)positionalLightStatus);
@@ -457,14 +457,13 @@ int main() {
 		}
 
 		glBindVertexArray(VAO);
-		// Sets render mode
+		// Sets render mode, renders model
 		if (renderType == 0) {
 			glDrawElements(GL_POINTS, indices.size(), GL_UNSIGNED_INT, 0); // Render as points
 		}
 		else {
 			glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0); // Render as lines
 		}
-
 		glBindVertexArray(0);
 
 		// Draws GUI

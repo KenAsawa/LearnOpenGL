@@ -6,7 +6,7 @@ uniform vec3 light_color;
 uniform vec3 light_position;
 uniform vec3 object_color;
 uniform vec3 view_position;
-uniform int objectShine;
+uniform int shininess;
 uniform bool applySmoothing;
 
 uniform bool posLightStatus;
@@ -31,15 +31,19 @@ vec3 calculatePosLight(vec3, vec3, vec3);
 
 void main()
 {
-	vec3 lightColor = light_color;
+	vec3 lightColor;
 	vec3 posLight;
-	vec3 dirLightColor = light_color;
+	vec3 dirLightColor;
 	vec3 dirLight;
 
-	if(!posLightStatus){
+	if(posLightStatus){
+		lightColor = light_color;
+	}else{
 		lightColor = vec3(0, 0, 0);
 	}
-	if(!dirLightStatus){
+	if(dirLightStatus){
+		dirLightColor = light_color;
+	}else{
 		dirLightColor = vec3(0, 0, 0);
 	}
 
@@ -69,7 +73,7 @@ vec3 calculateDirLight(vec3 light_color, vec3 fragment_position, vec3 normal){
 	vec3 view_direction = normalize(view_position - fragment_position);
 	vec3 reflect_light_direction = reflect(-light_direction, normalize(normal));
 	float specular_strength = 1.0f;
-	vec3 specular = specular_strength * pow(max(dot(reflect_light_direction, view_direction), 0.0), objectShine) * dirLightSpecularColor * light_color;
+	vec3 specular = specular_strength * pow(max(dot(reflect_light_direction, view_direction), 0.0), shininess) * dirLightSpecularColor * light_color;
 	
 	return (ambient + diffuse + specular);
 }
@@ -89,7 +93,7 @@ vec3 calculatePosLight(vec3 light_color, vec3 fragment_position, vec3 normal){
 	vec3 view_direction = normalize(view_position - fragment_position);
 	vec3 reflect_light_direction = reflect(-light_direction, normalize(normal));
 	float specular_strength = 1.0f;
-	vec3 specular = specular_strength * pow(max(dot(reflect_light_direction, view_direction), 0.0), objectShine) * posSpecularLightColor * light_color;
+	vec3 specular = specular_strength * pow(max(dot(reflect_light_direction, view_direction), 0.0), shininess) * posSpecularLightColor * light_color;
 	
 	return (ambient + diffuse + specular);
 }
