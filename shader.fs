@@ -29,6 +29,9 @@ flat in vec3 flatNormal;
 vec3 calculateDirLight(vec3, vec3, vec3);
 vec3 calculatePosLight(vec3, vec3, vec3);
 
+uniform sampler2D cyborgTexture;
+in vec2 TexCoord;
+
 void main()
 {
 	vec3 lightColor;
@@ -56,7 +59,9 @@ void main()
 		dirLight = calculateDirLight(dirLightColor, flatFragmentPosition, flatNormal);
 	}
 
-	resultColor = vec4((posLight + dirLight) * object_color, 1.0f);
+	//resultColor = vec4((posLight + dirLight) * object_color, 1.0f);
+	vec2 tex_coord_invert = vec2(TexCoord.x, 1 - TexCoord.y);
+	resultColor = texture(cyborgTexture, TexCoord);
 } 
 
 vec3 calculateDirLight(vec3 light_color, vec3 fragment_position, vec3 normal){

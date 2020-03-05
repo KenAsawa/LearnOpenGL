@@ -5,6 +5,7 @@
 // GLFW
 #include <GLFW/glfw3.h>
 #include <iostream>
+#include <stb_image.h>
 #include "nanogui/nanogui.h"
 #include "shaderloader.h"
 #include "objloaderindex.h"
@@ -297,7 +298,7 @@ int main() {
 
 	//Build and compile shader
 	GLuint shader = loadSHADER("shader.vs", "shader.fs");
-	glUseProgram(shader);
+
 
 	//Loads model
 	loadOBJ("resources/objects/cyborg.obj", indices, vertices, normals, UVs);
@@ -345,6 +346,34 @@ int main() {
 	glUniform3fv(glGetUniformLocation(shader, "light_position"), 1, glm::value_ptr(glm::vec3(0.0f, 0.0f, 0.0f)));
 	glUniform3fv(glGetUniformLocation(shader, "object_color"), 1, glm::value_ptr(glm::vec3(0.5, 0.5, 0.5)));
 	glUniform3fv(glGetUniformLocation(shader, "view_position"), 1, glm::value_ptr(glm::vec3(cam_pos)));
+
+	// Load and Create texture
+	unsigned int cyborgTexture;
+	// texture 1
+// ---------
+	glGenTextures(1, &cyborgTexture);
+	glBindTexture(GL_TEXTURE_2D, cyborgTexture);
+	// set the texture wrapping parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+	// set texture filtering parameters
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	// load image, create texture and generate mipmaps
+	int width, height, nrChannels;
+	stbi_set_flip_vertically_on_load(true);
+	std::string pathName = "resources/textures/cyborg_diffuse.png";
+	unsigned char* data = stbi_load(pathName.c_str(), &width, &height, &nrChannels, 0);
+	if (data)
+	{
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+		glGenerateMipmap(GL_TEXTURE_2D);
+	}
+	else
+	{
+		std::cout << "Failed to load texture" << std::endl;
+	}
+	stbi_image_free(data);
 
 	// Game Loop
 	while (!glfwWindowShouldClose(window)) {
@@ -438,6 +467,10 @@ int main() {
 		else {
 			glFrontFace(GL_CCW); // Renders CCW
 		}
+
+		// bind textures on corresponding texture units
+		glActiveTexture(GL_TEXTURE0);
+		glBindTexture(GL_TEXTURE_2D, cyborgTexture);
 
 		// Sets render mode
 		if (renderType == 0) {

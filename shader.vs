@@ -1,7 +1,8 @@
 #version 330 core
   
 layout (location = 0) in vec3 position;
-layout(location = 1) in vec3 normals;
+layout (location = 1) in vec2 aTexCoord;
+layout (location = 2) in vec3 normals;
 
 uniform mat4 projectionMatrix;
 uniform mat4 viewMatrix;
@@ -17,6 +18,7 @@ smooth out vec3 smoothNormal;
 
 flat out vec3 flatFragmentPosition;
 flat out vec3 flatNormal;
+out vec2 TexCoord;
 
 void main()
 {
@@ -25,4 +27,5 @@ void main()
 	flatFragmentPosition = vec3(modelMatrix * vec4(position, 1.0f));
 	flatNormal = mat3(transpose(inverse(modelMatrix))) * normals;
 	gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+	TexCoord = aTexCoord;
 }
